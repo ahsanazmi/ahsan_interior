@@ -11,8 +11,18 @@ from app.db import get_db
 from app.models.image import UploadedImage
 from app.models.user import User
 
-UPLOAD_DIR = Path(__file__).resolve().parents[3] / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
+# Determine writable uploads directory. Prefer `UPLOAD_DIR` env var, then project `uploads`.
+upload_env = os.getenv("UPLOAD_DIR")
+if upload_env:
+    UPLOAD_DIR = Path(upload_env)
+else:
+    UPLOAD_DIR = Path(__file__).resolve().parents[3] / "uploads"
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    # Fallback to /tmp/uploads on serverless read-only filesystems
+    UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "/tmp/uploads"))
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(prefix="/admin/images", tags=["admin-images"])
 

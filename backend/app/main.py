@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+import os
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -9,8 +10,19 @@ from app.core.config import settings
 from app.core.cors import add_cors_middleware
 from app.db import init_db
 
-UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
+# Determine writable uploads directory. Prefer `UPLOAD_DIR` env var, then project `uploads`.
+default_upload = Path(__file__).resolve().parent.parent / "uploads"
+upload_env = os.getenv("UPLOAD_DIR")
+if upload_env:
+    UPLOAD_DIR = Path(upload_env)
+else:
+    UPLOAD_DIR = default_upload
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    # Serverless environments often have a read-only file system. Fallback to /tmp/uploads.
+    UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "/tmp/uploads"))
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @asynccontextmanager
