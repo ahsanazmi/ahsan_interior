@@ -3,8 +3,8 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/lib/auth";
-
+//import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from '../lib/auth' 
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
