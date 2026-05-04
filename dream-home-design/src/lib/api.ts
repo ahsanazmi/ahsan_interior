@@ -57,11 +57,11 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options?.headers ?? {}),
       },
-      ...options,
     });
   } catch (err) {
     throw new Error("Failed to fetch — please connect with backend");
@@ -105,6 +105,8 @@ export type QuotePayload = {
   bhk: string;
   rooms: string;
   package: string;
+  home_type?: string;
+  total_price?: number;
 };
 
 export type QuoteResponse = {
@@ -246,10 +248,106 @@ export type BookingItem = {
   source: string;
   created_at: string;
   status: string;
+  email_sent?: boolean;
+  reminder_sent?: boolean;
 };
 
 export function fetchMyBookings() {
   return requestJson<BookingItem[]>("/user/bookings", { headers: authHeaders() });
+}
+
+export async function deleteMyBooking(bookingId: number) {
+  const token = localStorage.getItem("token");
+  await fetch(`${API_BASE_URL}/user/bookings/${bookingId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateMyBooking(bookingId: number, payload: AppointmentPayload) {
+  return requestJson<AppointmentOut>(`/user/bookings/${bookingId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    headers: authHeaders(),
+  });
+}
+
+export function fetchMyQuotes() {
+  return requestJson<QuoteItem[]>("/user/quotes", { headers: authHeaders() });
+}
+
+export async function deleteMyQuote(quoteId: number) {
+  const token = localStorage.getItem("token");
+  await fetch(`${API_BASE_URL}/user/quotes/${quoteId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateMyQuote(quoteId: number, payload: Record<string, any>) {
+  return requestJson<QuoteItem>(`/user/quotes/${quoteId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    headers: authHeaders(),
+  });
+}
+
+export type AppointmentOut = {
+  id: number;
+  external_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  preferred_date: string;
+  preferred_time: string;
+  scheduled_for: string;
+  whatsapp_updates: boolean;
+  notes: string | null;
+  source: string;
+  created_at: string;
+};
+
+/* ── Price Calculations ── */
+
+export type PriceCalculationPayload = {
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  scope: string;
+  bhk: string;
+  rooms: string;
+  package: string;
+  home_type: string;
+  total_price: number;
+  whatsapp_updates: boolean;
+  notes?: string;
+};
+
+export type PriceCalculationItem = {
+  id: number;
+  external_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  scope: string;
+  bhk: string;
+  rooms: string;
+  package: string;
+  home_type: string;
+  total_price: number;
+  whatsapp_updates: boolean;
+  notes: string | null;
+  created_at: string;
+};
+
+export function savePriceCalculation(payload: PriceCalculationPayload) {
+  return requestJson<PriceCalculationItem>("/price-calculations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 /* ── Admin dashboard ── */
@@ -259,6 +357,7 @@ export type DashboardStats = {
   today_appointments: number;
   total_leads: number;
   total_quotes: number;
+  total_price_calculations: number;
   total_users: number;
 };
 
@@ -268,6 +367,35 @@ export function fetchAdminStats() {
 
 export function fetchAdminAppointments() {
   return requestJson<BookingItem[]>("/admin/appointments", { headers: authHeaders() });
+}
+
+export function searchAdminAppointments(search?: string, status?: string, city?: string) {
+  const params = new URLSearchParams();
+  if (search) params.append("search", search);
+  if (status) params.append("status", status);
+  if (city) params.append("city", city);
+  
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return requestJson<BookingItem[]>(`/admin/appointments${query}`, { headers: authHeaders() });
+}
+
+export async function exportAppointmentsCSV() {
+  const response = await fetch(`${API_BASE_URL}/admin/appointments/export/csv`, {
+    headers: authHeaders(),
+  });
+  
+  if (!response.ok) throw new Error("Failed to export appointments");
+  
+  const data = await response.json();
+  
+  // Create CSV download
+  const blob = new Blob([data.content], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = data.filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
 }
 
 export type LeadItem = {
@@ -297,12 +425,82 @@ export type QuoteItem = {
   bhk: string;
   rooms: string;
   package: string;
+  home_type?: string;
+  total_price?: number;
   whatsapp_updates: boolean;
   created_at: string;
 };
 
 export function fetchAdminQuotes() {
   return requestJson<QuoteItem[]>("/admin/quotes", { headers: authHeaders() });
+}
+
+export function fetchAdminPriceCalculations() {
+  return requestJson<PriceCalculationItem[]>("/admin/price-calculations", { headers: authHeaders() });
+}
+
+export async function deleteAdminPriceCalculation(calculationId: number) {
+  const token = localStorage.getItem("token");
+  await fetch(`${API_BASE_URL}/admin/price-calculations/${calculationId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateAdminPriceCalculation(calculationId: number, payload: Record<string, any>) {
+  return requestJson<PriceCalculationItem>(`/admin/price-calculations/${calculationId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    headers: authHeaders(),
+  });
+}
+
+export async function deleteAdminAppointment(appointmentId: number) {
+  const token = localStorage.getItem("token");
+  await fetch(`${API_BASE_URL}/admin/appointments/${appointmentId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateAdminAppointment(appointmentId: number, payload: AppointmentPayload) {
+  return requestJson<AppointmentOut>(`/admin/appointments/${appointmentId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    headers: authHeaders(),
+  });
+}
+
+export async function deleteAdminQuote(quoteId: number) {
+  const token = localStorage.getItem("token");
+  await fetch(`${API_BASE_URL}/admin/quotes/${quoteId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateAdminQuote(quoteId: number, payload: Record<string, any>) {
+  return requestJson<QuoteItem>(`/admin/quotes/${quoteId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    headers: authHeaders(),
+  });
+}
+
+export async function deleteAdminLead(leadId: number) {
+  const token = localStorage.getItem("token");
+  await fetch(`${API_BASE_URL}/admin/leads/${leadId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateAdminLead(leadId: number, payload: Record<string, any>) {
+  return requestJson<LeadItem>(`/admin/leads/${leadId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    headers: authHeaders(),
+  });
 }
 
 /* ── Admin Blogs ── */

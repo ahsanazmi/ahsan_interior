@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { fetchCalculatorSettings, submitQuote, type CalculatorSettings } from "@/lib/api";
+import { fetchCalculatorSettings, submitQuote, savePriceCalculation, type CalculatorSettings } from "@/lib/api";
 import heroLiving from "@/assets/hero-living.jpg";
 import heroBedroom from "@/assets/hero-bedroom.jpg";
 import heroKitchen from "@/assets/hero-kitchen.jpg";
@@ -182,6 +182,24 @@ function PriceCalc() {
     // Final step — submit to backend
     setSubmitting(true);
     try {
+      const homeType = scope.includes("new home") ? "new_home" : "renovation";
+      
+      // Save calculation history
+      await savePriceCalculation({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        city,
+        whatsapp_updates: updatesOnWhatsapp,
+        scope,
+        bhk,
+        rooms: JSON.stringify(rooms),
+        package: selectedPackage,
+        home_type: homeType,
+        total_price: estimatedPrice,
+      });
+
+      // Also save as quote with price included
       await submitQuote({
         name: name.trim(),
         email: email.trim(),
@@ -192,7 +210,10 @@ function PriceCalc() {
         bhk,
         rooms: JSON.stringify(rooms),
         package: selectedPackage,
+        home_type: homeType,
+        total_price: estimatedPrice,
       });
+
       toast.success("Your estimate request is submitted! Our team will contact you shortly.");
       // Reset form
       setStarted(false);

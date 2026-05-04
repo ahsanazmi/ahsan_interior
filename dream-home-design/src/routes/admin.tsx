@@ -9,7 +9,7 @@ import {
 } from "react";
 import {
   CalendarDays, Users, Clock, LogOut, ShieldCheck, Loader2, MapPin,
-  UserPlus, Image, FileText, Tag, Plus, Trash2, Upload, Calculator,
+  UserPlus, Image, FileText, Tag, Plus, Trash2, Upload, Calculator, Edit2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,14 +20,17 @@ import {
   fetchAdminBlogs, createAdminBlog, deleteAdminBlog,
   fetchAdminImages, uploadAdminImage, deleteAdminImage,
   fetchAdminOffers, createAdminOffer, deleteAdminOffer,
-  fetchAdminQuotes,
+  fetchAdminQuotes, deleteAdminAppointment, updateAdminAppointment,
+  deleteAdminQuote, updateAdminQuote, deleteAdminLead, updateAdminLead,
+  fetchAdminPriceCalculations, deleteAdminPriceCalculation, updateAdminPriceCalculation,
   fetchAdminCalculatorSettings, updateAdminCalculatorSettings,
   type DashboardStats, type BookingItem, type LeadItem,
   type BlogItem, type BlogPayload,
   type ImageItem,
   type OfferItem, type OfferPayload,
-  type QuoteItem,
+  type QuoteItem, type PriceCalculationItem,
   type CalculatorSettings,
+  type AppointmentPayload,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -41,7 +44,7 @@ export const Route = createFileRoute("/admin")({
   }),
 });
 
-type Tab = "appointments" | "leads" | "quotes" | "calculator" | "blogs" | "images" | "offers";
+type Tab = "appointments" | "leads" | "quotes" | "calculation-history" | "calculator" | "blogs" | "images" | "offers";
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/api$/, "");
 
@@ -53,6 +56,7 @@ function AdminDashboard() {
   const [appointments, setAppointments] = useState<BookingItem[]>([]);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [quotes, setQuotes] = useState<QuoteItem[]>([]);
+  const [priceCalculations, setPriceCalculations] = useState<PriceCalculationItem[]>([]);
   const [blogs, setBlogs] = useState<BlogItem[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [offers, setOffers] = useState<OfferItem[]>([]);
@@ -63,18 +67,35 @@ function AdminDashboard() {
     if (authLoading) return;
     if (!user) { navigate({ to: "/login" }); return; }
     if (user.role !== "admin") { navigate({ to: "/dashboard" }); return; }
-    Promise.all([
+    setLoading(true);
+    let mounted = true;
+
+    Promise.allSettled([
       fetchAdminStats(), fetchAdminAppointments(), fetchAdminLeads(),
       fetchAdminBlogs(), fetchAdminImages(), fetchAdminOffers(),
-      fetchAdminQuotes(), fetchAdminCalculatorSettings(),
+      fetchAdminQuotes(), fetchAdminCalculatorSettings(), fetchAdminPriceCalculations(),
     ])
-      .then(([s, a, l, b, i, o, q, c]) => {
-        setStats(s); setAppointments(a); setLeads(l);
-        setBlogs(b); setImages(i); setOffers(o); setQuotes(q);
-        setCalculatorSettings(c);
+      .then(([s, a, l, b, i, o, q, c, p]) => {
+        if (!mounted) return;
+        if (s.status === "fulfilled") setStats(s.value);
+        if (a.status === "fulfilled") setAppointments(a.value);
+        if (l.status === "fulfilled") setLeads(l.value);
+        if (b.status === "fulfilled") setBlogs(b.value);
+        if (i.status === "fulfilled") setImages(i.value);
+        if (o.status === "fulfilled") setOffers(o.value);
+        if (q.status === "fulfilled") setQuotes(q.value);
+        if (c.status === "fulfilled") setCalculatorSettings(c.value);
+        if (p.status === "fulfilled") setPriceCalculations(p.value);
+
+        if ([s, a, l, b, i, o, q, c, p].some((result) => result.status === "rejected")) {
+          toast.error("Some admin data could not load. Please check backend/database.");
+        }
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => { mounted = false; };
   }, [user, authLoading, navigate]);
 
   if (authLoading || !user) {
@@ -85,6 +106,7 @@ function AdminDashboard() {
     { key: "appointments", label: "Appointments", icon: CalendarDays },
     { key: "leads", label: "Leads", icon: UserPlus },
     { key: "quotes", label: "Quotes", icon: Calculator },
+    { key: "calculation-history", label: "Calculation History", icon: Calculator },
     { key: "calculator", label: "Calculator", icon: Calculator },
     { key: "blogs", label: "Blogs", icon: FileText },
     { key: "images", label: "Images", icon: Image },
@@ -143,11 +165,16 @@ function AdminDashboard() {
             <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
           ) : (
             <>
-              {tab === "appointments" && <AppointmentsTab data={appointments} />}
-              {tab === "leads" && <LeadsTab data={leads} />}
-              {tab === "quotes" && <QuotesTab data={quotes} />}
-              {tab === "calculator" && calculatorSettings && (
-                <CalculatorSettingsTab data={calculatorSettings} onChange={setCalculatorSettings} />
+              {tab === "appointments" && <AppointmentsTab data={appointments} onDelete={(id) => { setAppointments(appointments.filter(a => a.id !== id)); }} onChange={setAppointments} />}
+              {tab === "leads" && <LeadsTab data={leads} onDelete={(id) => { setLeads(leads.filter(l => l.id !== id)); }} onChange={setLeads} />}
+              {tab === "quotes" && <QuotesTab data={quotes} onDelete={(id) => { setQuotes(quotes.filter(q => q.id !== id)); }} onChange={setQuotes} />}
+              {tab === "calculation-history" && <CalculationHistoryTab data={priceCalculations} onDelete={(id) => { setPriceCalculations(priceCalculations.filter(p => p.id !== id)); }} onChange={setPriceCalculations} />}
+              {tab === "calculator" && (
+                calculatorSettings ? (
+                  <CalculatorSettingsTab data={calculatorSettings} onChange={setCalculatorSettings} />
+                ) : (
+                  <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                )
               )}
               {tab === "blogs" && <BlogsTab data={blogs} onChange={setBlogs} />}
               {tab === "images" && <ImagesTab data={images} onChange={setImages} />}
@@ -171,93 +198,625 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ComponentTy
 }
 
 /* ── Appointments Tab ── */
-function AppointmentsTab({ data }: { data: BookingItem[] }) {
+function AppointmentsTab({ data, onDelete }: { data: BookingItem[]; onDelete: (id: number) => void; onChange: (data: BookingItem[]) => void }) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Partial<AppointmentPayload>>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [cityFilter, setCityFilter] = useState<string>("");
+
   if (data.length === 0) return <p className="p-8 text-center text-muted-foreground">No appointments yet.</p>;
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this appointment?")) return;
+    try {
+      await deleteAdminAppointment(id);
+      toast.success("Appointment deleted");
+      onDelete(id);
+    } catch (e) {
+      toast.error("Failed to delete appointment");
+    }
+  };
+
+  const handleEdit = (a: BookingItem) => {
+    setEditingId(a.id);
+    setEditData({
+      name: a.name,
+      email: a.email,
+      phone: a.phone,
+      city: a.city,
+      preferred_date: a.preferred_date,
+      preferred_time: a.preferred_time,
+      whatsapp_updates: a.whatsapp_updates,
+      notes: a.notes || "",
+      status: a.status,
+    });
+  };
+
+  const handleSave = async (id: number) => {
+    try {
+      await updateAdminAppointment(id, editData as AppointmentPayload);
+      toast.success("Appointment updated");
+      setEditingId(null);
+      const updated = await fetchAdminAppointments();
+    } catch (e) {
+      toast.error("Failed to update appointment");
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const { exportAppointmentsCSV } = await import("@/lib/api");
+      await exportAppointmentsCSV();
+      toast.success("Appointments exported successfully");
+    } catch (e) {
+      toast.error("Failed to export appointments");
+    }
+  };
+
+  // Filter data
+  const filteredData = data.filter(a => {
+    const matchesSearch = !searchTerm || 
+      a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.phone.includes(searchTerm);
+    const matchesStatus = !statusFilter || a.status === statusFilter;
+    const matchesCity = !cityFilter || a.city.toLowerCase().includes(cityFilter.toLowerCase());
+    return matchesSearch && matchesStatus && matchesCity;
+  });
+
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
-      <table className="w-full min-w-[900px] text-left text-sm">
-        <thead className="border-b border-border bg-muted/40">
-          <tr>{["Name","Email","Phone","City","Date","Time","Source","Booked"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {data.map(a => (
-            <tr key={a.external_id} className="border-b border-border/50 hover:bg-muted/20">
-              <td className="px-5 py-3 font-medium">{a.name}</td>
-              <td className="px-5 py-3 text-muted-foreground">{a.email}</td>
-              <td className="px-5 py-3 text-muted-foreground">{a.phone}</td>
-              <td className="px-5 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{a.city}</td>
-              <td className="px-5 py-3">{a.preferred_date}</td>
-              <td className="px-5 py-3">{a.preferred_time}</td>
-              <td className="px-5 py-3"><span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase text-primary">{a.source}</span></td>
-              <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <>
+      {editingId ? (
+        <EditAppointmentForm
+          appointment={data.find(a => a.id === editingId)!}
+          onSave={() => handleSave(editingId)}
+          onCancel={() => setEditingId(null)}
+          onChange={setEditData}
+          data={editData as AppointmentPayload}
+        />
+      ) : (
+        <>
+          {/* Search & Filter Bar */}
+          <div className="mb-6 rounded-2xl border border-border bg-white p-4 shadow-soft">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div>
+                <Label className="text-xs">Search (Name/Email/Phone)</Label>
+                <Input
+                  placeholder="Search appointments..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Status</Label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                >
+                  <option value="">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">City</Label>
+                <Input
+                  placeholder="Filter by city..."
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <Button onClick={handleExport} variant="outline" className="rounded-full flex-1">
+                  📥 Export CSV
+                </Button>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Showing {filteredData.length} of {data.length} appointments</p>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
+            <table className="w-full min-w-[1200px] text-left text-sm">
+              <thead className="border-b border-border bg-muted/40">
+                <tr>{["Name","Email","Phone","City","Date","Status","Email","Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {filteredData.map(a => (
+                  <tr key={a.external_id} className="border-b border-border/50 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium">{a.name}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{a.email}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{a.phone}</td>
+                    <td className="px-4 py-3 text-xs"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{a.city}</td>
+                    <td className="px-4 py-3 text-xs">{a.preferred_date} {a.preferred_time}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
+                        a.status === "confirmed" ? "bg-emerald-100 text-emerald-700" :
+                        a.status === "completed" ? "bg-blue-100 text-blue-700" :
+                        a.status === "cancelled" ? "bg-red-100 text-red-700" :
+                        "bg-amber-100 text-amber-700"
+                      }`}>
+                        {a.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {a.email_sent ? "✅" : "—"}
+                    </td>
+                    <td className="px-4 py-3 flex gap-2">
+                      <button onClick={() => handleEdit(a)} className="text-blue-600 hover:text-blue-700" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleDelete(a.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function EditAppointmentForm({ appointment, onSave, onCancel, onChange, data }: any) {
+  return (
+    <div className="rounded-2xl border border-border bg-white shadow-soft p-6">
+      <h3 className="text-lg font-semibold text-plum mb-4">Edit Appointment</h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Name</Label>
+          <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} />
+        </div>
+        <div>
+          <Label>Email</Label>
+          <Input value={data.email} onChange={(e) => onChange({ ...data, email: e.target.value })} />
+        </div>
+        <div>
+          <Label>Phone</Label>
+          <Input value={data.phone} onChange={(e) => onChange({ ...data, phone: e.target.value })} />
+        </div>
+        <div>
+          <Label>City</Label>
+          <Input value={data.city} onChange={(e) => onChange({ ...data, city: e.target.value })} />
+        </div>
+        <div>
+          <Label>Date</Label>
+          <Input type="date" value={data.preferred_date} onChange={(e) => onChange({ ...data, preferred_date: e.target.value })} />
+        </div>
+        <div>
+          <Label>Time</Label>
+          <Input type="time" value={data.preferred_time} onChange={(e) => onChange({ ...data, preferred_time: e.target.value })} />
+        </div>
+        <div>
+          <Label>Status</Label>
+          <select
+            value={data.status || "pending"}
+            onChange={(e) => onChange({ ...data, status: e.target.value })}
+            className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+          >
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <Label>Email Status</Label>
+          <div className="h-10 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm flex items-center">
+            {appointment.email_sent ? "✅ Sent" : "—  Not sent"}
+          </div>
+        </div>
+        <div className="md:col-span-2">
+          <Label>Notes</Label>
+          <Input value={data.notes || ""} onChange={(e) => onChange({ ...data, notes: e.target.value })} />
+        </div>
+        <div className="md:col-span-2 flex gap-3">
+          <Button onClick={onSave} className="rounded-full">Save</Button>
+          <Button onClick={onCancel} variant="outline" className="rounded-full">Cancel</Button>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ── Leads Tab ── */
-function LeadsTab({ data }: { data: LeadItem[] }) {
+function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number) => void; onChange: (data: LeadItem[]) => void }) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Partial<LeadItem>>({});
+
   if (data.length === 0) return <p className="p-8 text-center text-muted-foreground">No leads yet.</p>;
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this lead?")) return;
+    try {
+      await deleteAdminLead(id);
+      toast.success("Lead deleted");
+      onDelete(id);
+    } catch (e) {
+      toast.error("Failed to delete lead");
+    }
+  };
+
+  const handleEdit = (l: LeadItem) => {
+    setEditingId(l.id);
+    setEditData({
+      name: l.name,
+      email: l.email,
+      phone: l.phone,
+      city: l.city,
+      whatsapp_updates: l.whatsapp_updates,
+      source: l.source,
+    });
+  };
+
+  const handleSave = async (id: number) => {
+    try {
+      await updateAdminLead(id, editData);
+      toast.success("Lead updated");
+      setEditingId(null);
+    } catch (e) {
+      toast.error("Failed to update lead");
+    }
+  };
+
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
-      <table className="w-full min-w-[750px] text-left text-sm">
-        <thead className="border-b border-border bg-muted/40">
-          <tr>{["Name","Email","Phone","City","WhatsApp","Source","Date"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {data.map(l => (
-            <tr key={l.external_id} className="border-b border-border/50 hover:bg-muted/20">
-              <td className="px-5 py-3 font-medium">{l.name}</td>
-              <td className="px-5 py-3 text-muted-foreground">{l.email}</td>
-              <td className="px-5 py-3 text-muted-foreground">{l.phone}</td>
-              <td className="px-5 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{l.city}</td>
-              <td className="px-5 py-3">{l.whatsapp_updates ? "✅" : "—"}</td>
-              <td className="px-5 py-3"><span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase text-amber-700">{l.source}</span></td>
-              <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(l.created_at).toLocaleDateString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <>
+      {editingId ? (
+        <EditLeadForm
+          lead={data.find(l => l.id === editingId)!}
+          onSave={() => handleSave(editingId)}
+          onCancel={() => setEditingId(null)}
+          onChange={setEditData}
+          data={editData}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
+          <table className="w-full min-w-[850px] text-left text-sm">
+            <thead className="border-b border-border bg-muted/40">
+              <tr>{["Name","Email","Phone","City","WhatsApp","Source","Date","Actions"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {data.map(l => (
+                <tr key={l.external_id} className="border-b border-border/50 hover:bg-muted/20">
+                  <td className="px-5 py-3 font-medium">{l.name}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{l.email}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{l.phone}</td>
+                  <td className="px-5 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{l.city}</td>
+                  <td className="px-5 py-3">{l.whatsapp_updates ? "✅" : "—"}</td>
+                  <td className="px-5 py-3"><span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase text-amber-700">{l.source}</span></td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(l.created_at).toLocaleDateString()}</td>
+                  <td className="px-5 py-3 flex gap-2">
+                    <button onClick={() => handleEdit(l)} className="text-blue-600 hover:text-blue-700" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                    <button onClick={() => handleDelete(l.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function EditLeadForm({ lead, onSave, onCancel, onChange, data }: any) {
+  return (
+    <div className="rounded-2xl border border-border bg-white shadow-soft p-6">
+      <h3 className="text-lg font-semibold text-plum mb-4">Edit Lead</h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Name</Label>
+          <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} />
+        </div>
+        <div>
+          <Label>Email</Label>
+          <Input value={data.email} onChange={(e) => onChange({ ...data, email: e.target.value })} />
+        </div>
+        <div>
+          <Label>Phone</Label>
+          <Input value={data.phone} onChange={(e) => onChange({ ...data, phone: e.target.value })} />
+        </div>
+        <div>
+          <Label>City</Label>
+          <Input value={data.city} onChange={(e) => onChange({ ...data, city: e.target.value })} />
+        </div>
+        <div>
+          <Label>Source</Label>
+          <Input value={data.source} onChange={(e) => onChange({ ...data, source: e.target.value })} />
+        </div>
+        <div className="flex items-center gap-2 pt-6">
+          <input type="checkbox" checked={data.whatsapp_updates} onChange={(e) => onChange({ ...data, whatsapp_updates: e.target.checked })} id="whatsapp" />
+          <Label htmlFor="whatsapp" className="!mt-0">WhatsApp Updates</Label>
+        </div>
+        <div className="md:col-span-2 flex gap-3">
+          <Button onClick={onSave} className="rounded-full">Save</Button>
+          <Button onClick={onCancel} variant="outline" className="rounded-full">Cancel</Button>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ── Quotes Tab ── */
-function QuotesTab({ data }: { data: QuoteItem[] }) {
+function QuotesTab({ data, onDelete }: { data: QuoteItem[]; onDelete: (id: number) => void; onChange: (data: QuoteItem[]) => void }) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Partial<QuoteItem>>({});
+
   if (data.length === 0) return <p className="p-8 text-center text-muted-foreground">No quote requests yet.</p>;
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this quote?")) return;
+    try {
+      await deleteAdminQuote(id);
+      toast.success("Quote deleted");
+      onDelete(id);
+    } catch (e) {
+      toast.error("Failed to delete quote");
+    }
+  };
+
+  const handleEdit = (q: QuoteItem) => {
+    setEditingId(q.id);
+    setEditData({
+      name: q.name,
+      email: q.email,
+      phone: q.phone,
+      city: q.city,
+      scope: q.scope,
+      bhk: q.bhk,
+      rooms: q.rooms,
+      package: q.package,
+      whatsapp_updates: q.whatsapp_updates,
+    });
+  };
+
+  const handleSave = async (id: number) => {
+    try {
+      await updateAdminQuote(id, editData);
+      toast.success("Quote updated");
+      setEditingId(null);
+    } catch (e) {
+      toast.error("Failed to update quote");
+    }
+  };
+
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
-      <table className="w-full min-w-[1050px] text-left text-sm">
-        <thead className="border-b border-border bg-muted/40">
-          <tr>{["Name","Email","Phone","City","Scope","BHK","Rooms","Package","WhatsApp","Date"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {data.map(q => {
-            let roomsSummary = q.rooms;
-            try {
-              const parsed = JSON.parse(q.rooms);
-              roomsSummary = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
-            } catch {}
-            return (
-              <tr key={q.external_id} className="border-b border-border/50 hover:bg-muted/20">
-                <td className="px-4 py-3 font-medium">{q.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">{q.email}</td>
-                <td className="px-4 py-3 text-muted-foreground">{q.phone}</td>
-                <td className="px-4 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{q.city}</td>
-                <td className="px-4 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{q.scope}</span></td>
-                <td className="px-4 py-3 font-semibold">{q.bhk}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate" title={roomsSummary}>{roomsSummary}</td>
-                <td className="px-4 py-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">{q.package}</span></td>
-                <td className="px-4 py-3">{q.whatsapp_updates ? "✅" : "—"}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <>
+      {editingId ? (
+        <EditQuoteForm
+          quote={data.find(q => q.id === editingId)!}
+          onSave={() => handleSave(editingId)}
+          onCancel={() => setEditingId(null)}
+          onChange={setEditData}
+          data={editData}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
+          <table className="w-full min-w-[1150px] text-left text-sm">
+            <thead className="border-b border-border bg-muted/40">
+              <tr>{["Name","Email","Phone","City","Scope","BHK","Rooms","Package","WhatsApp","Date","Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {data.map(q => {
+                let roomsSummary = q.rooms;
+                try {
+                  const parsed = JSON.parse(q.rooms);
+                  roomsSummary = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
+                } catch {}
+                return (
+                  <tr key={q.external_id} className="border-b border-border/50 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium">{q.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{q.email}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{q.phone}</td>
+                    <td className="px-4 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{q.city}</td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{q.scope}</span></td>
+                    <td className="px-4 py-3 font-semibold">{q.bhk}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate" title={roomsSummary}>{roomsSummary}</td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">{q.package}</span></td>
+                    <td className="px-4 py-3">{q.whatsapp_updates ? "✅" : "—"}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 flex gap-2">
+                      <button onClick={() => handleEdit(q)} className="text-blue-600 hover:text-blue-700" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleDelete(q.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function EditQuoteForm({ quote, onSave, onCancel, onChange, data }: any) {
+  return (
+    <div className="rounded-2xl border border-border bg-white shadow-soft p-6">
+      <h3 className="text-lg font-semibold text-plum mb-4">Edit Quote</h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Name</Label>
+          <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} />
+        </div>
+        <div>
+          <Label>Email</Label>
+          <Input value={data.email} onChange={(e) => onChange({ ...data, email: e.target.value })} />
+        </div>
+        <div>
+          <Label>Phone</Label>
+          <Input value={data.phone} onChange={(e) => onChange({ ...data, phone: e.target.value })} />
+        </div>
+        <div>
+          <Label>City</Label>
+          <Input value={data.city} onChange={(e) => onChange({ ...data, city: e.target.value })} />
+        </div>
+        <div>
+          <Label>Scope</Label>
+          <Input value={data.scope} onChange={(e) => onChange({ ...data, scope: e.target.value })} />
+        </div>
+        <div>
+          <Label>BHK</Label>
+          <Input value={data.bhk} onChange={(e) => onChange({ ...data, bhk: e.target.value })} />
+        </div>
+        <div>
+          <Label>Package</Label>
+          <Input value={data.package} onChange={(e) => onChange({ ...data, package: e.target.value })} />
+        </div>
+        <div className="flex items-center gap-2 pt-6">
+          <input type="checkbox" checked={data.whatsapp_updates} onChange={(e) => onChange({ ...data, whatsapp_updates: e.target.checked })} id="whatsapp_quote" />
+          <Label htmlFor="whatsapp_quote" className="!mt-0">WhatsApp Updates</Label>
+        </div>
+        <div className="md:col-span-2 flex gap-3">
+          <Button onClick={onSave} className="rounded-full">Save</Button>
+          <Button onClick={onCancel} variant="outline" className="rounded-full">Cancel</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Price Calculations Tab ── */
+
+/* ── Calculation History Tab ── */
+function CalculationHistoryTab({ data, onDelete, onChange }: { data: PriceCalculationItem[]; onDelete: (id: number) => void; onChange: (data: PriceCalculationItem[]) => void }) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Partial<PriceCalculationItem>>({});
+
+  if (data.length === 0) return <p className="p-8 text-center text-muted-foreground">No calculation history yet.</p>;
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this calculation?")) return;
+    try {
+      await deleteAdminPriceCalculation(id);
+      toast.success("Calculation deleted");
+      onDelete(id);
+    } catch (e) {
+      toast.error("Failed to delete calculation");
+    }
+  };
+
+  const handleEdit = (p: PriceCalculationItem) => {
+    setEditingId(p.id);
+    setEditData({
+      name: p.name,
+      email: p.email,
+      phone: p.phone,
+      city: p.city,
+      scope: p.scope,
+      bhk: p.bhk,
+      rooms: p.rooms,
+      package: p.package,
+      home_type: p.home_type,
+      total_price: p.total_price,
+      whatsapp_updates: p.whatsapp_updates,
+    });
+  };
+
+  const handleSave = async (id: number) => {
+    try {
+      await updateAdminPriceCalculation(id, editData);
+      toast.success("Calculation updated");
+      setEditingId(null);
+    } catch (e) {
+      toast.error("Failed to update calculation");
+    }
+  };
+
+  return (
+    <>
+      {editingId ? (
+        <EditCalculationForm
+          calculation={data.find(p => p.id === editingId)!}
+          onSave={() => handleSave(editingId)}
+          onCancel={() => setEditingId(null)}
+          onChange={setEditData}
+          data={editData}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
+          <table className="w-full min-w-[1200px] text-left text-sm">
+            <thead className="border-b border-border bg-muted/40">
+              <tr>{["Name","Email","Phone","City","Scope","BHK","Package","Home Type","Price","Date","Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {data.map(p => (
+                <tr key={p.external_id} className="border-b border-border/50 hover:bg-muted/20">
+                  <td className="px-4 py-3 font-medium">{p.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{p.email}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{p.phone}</td>
+                  <td className="px-4 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{p.city}</td>
+                  <td className="px-4 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{p.scope}</span></td>
+                  <td className="px-4 py-3 font-semibold">{p.bhk}</td>
+                  <td className="px-4 py-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">{p.package}</span></td>
+                  <td className="px-4 py-3"><span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-700">{p.home_type}</span></td>
+                  <td className="px-4 py-3 font-semibold text-green-600">₹{p.total_price?.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 flex gap-2">
+                    <button onClick={() => handleEdit(p)} className="text-blue-600 hover:text-blue-700" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                    <button onClick={() => handleDelete(p.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function EditCalculationForm({ calculation, onSave, onCancel, onChange, data }: any) {
+  return (
+    <div className="rounded-2xl border border-border bg-white shadow-soft p-6">
+      <h3 className="text-lg font-semibold text-plum mb-4">Edit Calculation</h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Name</Label>
+          <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} />
+        </div>
+        <div>
+          <Label>Email</Label>
+          <Input value={data.email} onChange={(e) => onChange({ ...data, email: e.target.value })} />
+        </div>
+        <div>
+          <Label>Phone</Label>
+          <Input value={data.phone} onChange={(e) => onChange({ ...data, phone: e.target.value })} />
+        </div>
+        <div>
+          <Label>City</Label>
+          <Input value={data.city} onChange={(e) => onChange({ ...data, city: e.target.value })} />
+        </div>
+        <div>
+          <Label>Scope</Label>
+          <Input value={data.scope} onChange={(e) => onChange({ ...data, scope: e.target.value })} />
+        </div>
+        <div>
+          <Label>BHK</Label>
+          <Input value={data.bhk} onChange={(e) => onChange({ ...data, bhk: e.target.value })} />
+        </div>
+        <div>
+          <Label>Package</Label>
+          <Input value={data.package} onChange={(e) => onChange({ ...data, package: e.target.value })} />
+        </div>
+        <div>
+          <Label>Home Type</Label>
+          <Input value={data.home_type} onChange={(e) => onChange({ ...data, home_type: e.target.value })} />
+        </div>
+        <div>
+          <Label>Total Price (₹)</Label>
+          <Input type="number" value={data.total_price} onChange={(e) => onChange({ ...data, total_price: parseFloat(e.target.value) })} />
+        </div>
+        <div className="md:col-span-2 flex gap-3">
+          <Button onClick={onSave} className="rounded-full">Save</Button>
+          <Button onClick={onCancel} variant="outline" className="rounded-full">Cancel</Button>
+        </div>
+      </div>
     </div>
   );
 }
