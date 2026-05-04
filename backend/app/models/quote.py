@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import DateTime, String, Text, func, Float
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -20,6 +20,8 @@ class QuoteRequest(Base):
     bhk: Mapped[str] = mapped_column(String(20), nullable=False)
     rooms: Mapped[str] = mapped_column(Text, nullable=False)  # JSON string
     package: Mapped[str] = mapped_column(String(50), nullable=False)
+    home_type: Mapped[str] = mapped_column(String(50), nullable=True)  # new_home or renovation
+    total_price: Mapped[float] = mapped_column(Float, nullable=True)  # calculated price
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

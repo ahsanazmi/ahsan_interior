@@ -13,6 +13,8 @@ class QuoteCreate(BaseModel):
     bhk: str = Field(min_length=2, max_length=20)
     rooms: str = Field(min_length=2)  # JSON string of room counts
     package: str = Field(min_length=2, max_length=50)
+    home_type: str = Field(min_length=2, max_length=50, default=None)  # new_home or renovation
+    total_price: float = Field(default=None)  # calculated price
 
 
 class QuoteResponse(BaseModel):

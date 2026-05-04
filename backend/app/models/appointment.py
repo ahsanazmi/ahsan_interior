@@ -37,6 +37,12 @@ class Appointment(Base):
     )
 
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="pending",
+        nullable=False
+    )  # pending, confirmed, completed, cancelled
 
     source: Mapped[str] = mapped_column(
         String(120),
@@ -46,5 +52,17 @@ class Appointment(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
+        nullable=False
+    )
+    
+    email_sent: Mapped[bool] = mapped_column(
+        default=False,
+        server_default="false",
+        nullable=False
+    )
+    
+    reminder_sent: Mapped[bool] = mapped_column(
+        default=False,
+        server_default="false",
         nullable=False
     )

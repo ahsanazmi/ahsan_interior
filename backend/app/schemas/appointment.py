@@ -14,6 +14,7 @@ class AppointmentCreate(BaseModel):
     whatsapp_updates: bool = True
     notes: str | None = Field(default=None, max_length=500)
     source: str = Field(default="appointment-form", max_length=120)
+    status: str = Field(default="pending", max_length=20)
 
 
 class AppointmentResponse(BaseModel):

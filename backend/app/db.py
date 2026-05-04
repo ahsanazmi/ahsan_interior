@@ -36,6 +36,17 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    from app.models import account_otp, appointment, blog, calculator, image, lead, offer, quote, user  # noqa
+    from app.models import (  # noqa
+        account_otp,
+        appointment,
+        blog,
+        calculator,
+        image,
+        lead,
+        offer,
+        price_calculation,
+        quote,
+        user,
+    )
 
     Base.metadata.create_all(bind=engine)

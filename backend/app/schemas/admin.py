@@ -18,6 +18,8 @@ class AppointmentOut(BaseModel):
     source: str
     created_at: datetime
     status: str = "pending"
+    email_sent: bool = False
+    reminder_sent: bool = False
 
     class Config:
         from_attributes = True
@@ -39,4 +41,5 @@ class DashboardStats(BaseModel):
     today_appointments: int
     total_leads: int
     total_quotes: int = 0
+    total_price_calculations: int = 0
     total_users: int

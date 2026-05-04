@@ -5,5 +5,6 @@ from app.models.calculator import CalculatorSettings
 from app.models.image import UploadedImage
 from app.models.lead import Lead
 from app.models.offer import Offer
+from app.models.price_calculation import PriceCalculation
 from app.models.quote import QuoteRequest
 from app.models.user import User
