@@ -31,6 +31,9 @@ export default defineConfig(({ command, mode }) => {
       host: "::",
       port: 8080,
     },
+    build: {
+      chunkSizeWarningLimit: 1000,
+    },
     plugins: [
       tailwindcss(),
       tsConfigPaths({ projects: ["./tsconfig.json"] }),

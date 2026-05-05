@@ -205,7 +205,7 @@ export function DesignIdeaCategoryContent({ slug }: { slug: string }) {
         <p className="text-xs font-medium text-muted-foreground">{page.resultsText}</p>
         <h1 className="mt-2 font-display text-4xl text-plum md:text-5xl">{page.pageTitle}</h1>
         <p className="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">{page.intro}</p>
-        <Link to="/hire-a-designer#quote-form" className="mt-2 inline-block text-sm font-semibold text-primary hover:underline">Read More</Link>
+        <Link to="/hire-a-designer" className="mt-2 inline-block text-sm font-semibold text-primary hover:underline">Read More</Link>
       </section>
 
       <section className="container-page pt-8">
@@ -225,7 +225,7 @@ export function DesignIdeaCategoryContent({ slug }: { slug: string }) {
                 <div className="p-3">
                   <p className="text-xs font-medium text-foreground/90">{card.title}</p>
                   <Link
-                    to="/hire-a-designer#quote-form"
+                    to="/hire-a-designer"
                     className="mt-3 block w-full rounded-full border border-primary px-4 py-2 text-center text-xs font-medium text-primary hover:bg-primary hover:text-white transition"
                   >
                     Book Free Consultation
@@ -249,7 +249,7 @@ export function DesignIdeaCategoryContent({ slug }: { slug: string }) {
                     <p className="mt-2 text-xs text-muted-foreground">{card.size}</p>
                     <div className="mt-3 flex gap-2">
                       <Link
-                        to="/hire-a-designer#quote-form"
+                        to="/hire-a-designer"
                         className="flex-1 rounded-full border border-primary px-3 py-2 text-center text-xs font-medium text-primary hover:bg-primary hover:text-white transition"
                       >
                         Book Free Consultation
@@ -324,7 +324,7 @@ export function DesignIdeaCategoryContent({ slug }: { slug: string }) {
                     <p className="mt-2 text-xs text-muted-foreground">{card.size}</p>
                     <div className="mt-3 flex gap-2">
                       <Link
-                        to="/hire-a-designer#quote-form"
+                        to="/hire-a-designer"
                         className="flex-1 rounded-full border border-primary px-3 py-2 text-center text-xs font-medium text-primary hover:bg-primary hover:text-white transition"
                       >
                         Book Free Consultation

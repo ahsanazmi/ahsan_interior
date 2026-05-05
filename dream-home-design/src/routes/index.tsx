@@ -174,7 +174,7 @@ function HomePage() {
                   size="lg"
                   className="h-14 rounded-full bg-white px-8 text-base text-plum hover:bg-white/90"
                 >
-                  <Link to="/hire-a-designer#quote-form">Book appointment</Link>
+                  <Link to="/hire-a-designer">Book appointment</Link>
                 </Button>
                 <Button
                   asChild
@@ -388,7 +388,7 @@ function HomePage() {
                 size="lg"
                 className="h-14 rounded-full bg-white px-8 text-plum hover:bg-white/90"
               >
-                <Link to="/hire-a-designer#quote-form">Book appointment</Link>
+                <Link to="/hire-a-designer">Book appointment</Link>
               </Button>
             </div>
             <ul className="space-y-3">
@@ -453,7 +453,7 @@ function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
             <Button asChild size="lg" className="h-14 rounded-full px-8">
-              <Link to="/hire-a-designer#quote-form">Book appointment</Link>
+              <Link to="/hire-a-designer">Book appointment</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="h-14 rounded-full px-8">
               <Link to="/store-locator">Visit a store</Link>

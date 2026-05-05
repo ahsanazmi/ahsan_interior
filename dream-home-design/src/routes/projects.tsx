@@ -155,7 +155,7 @@ function ProjectCard({
           variant="outline"
           className="mt-4 h-10 w-full rounded-full border-primary text-primary"
         >
-          <Link to="/hire-a-designer#quote-form">{buttonLabel}</Link>
+          <Link to="/hire-a-designer">{buttonLabel}</Link>
         </Button>
       </div>
     </article>
@@ -196,7 +196,7 @@ function Projects() {
               NextGen Delivered Homes features expertly crafted, personalized interiors, showcasing
               stunning transformations and seamless execution for inspiring, real home makeovers.
             </p>
-            <Link to="/hire-a-designer#quote-form" className="mt-3 inline-block text-sm font-semibold text-primary hover:underline">Read More</Link>
+            <Link to="/hire-a-designer" className="mt-3 inline-block text-sm font-semibold text-primary hover:underline">Read More</Link>
           </div>
 
           <Button variant="outline" className="rounded-full px-4 lg:mt-12">
@@ -237,7 +237,7 @@ function Projects() {
                     variant="outline"
                     className="mt-3 h-9 w-full rounded-full border-primary text-primary"
                   >
-                    <Link to="/hire-a-designer#quote-form">Get Similar Interiors</Link>
+                    <Link to="/hire-a-designer">Get Similar Interiors</Link>
                   </Button>
                 </div>
               </article>

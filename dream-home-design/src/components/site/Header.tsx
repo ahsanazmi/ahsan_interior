@@ -409,12 +409,12 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <Link
-            to="/hire-a-designer#quote-form"
+          <a
+            href="/hire-a-designer"
             className="hidden md:inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-soft transition hover:bg-primary/90"
           >
             Book appointment
-          </Link>
+          </a>
           <Link
             to="/login"
             className="hidden md:inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground/70 transition hover:border-primary hover:text-primary"
@@ -456,9 +456,9 @@ export function Header() {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Button asChild className="h-12 rounded-full">
-                <Link to="/hire-a-designer#quote-form" onClick={() => setOpen(false)}>
+                <a href="/hire-a-designer" onClick={() => setOpen(false)}>
                   Book appointment
-                </Link>
+                </a>
               </Button>
               <Button asChild variant="outline" className="h-12 rounded-full bg-white/80">
                 <Link to="/login" onClick={() => setOpen(false)}>
@@ -474,12 +474,12 @@ export function Header() {
       <div className="hidden md:block border-t border-border bg-background">
         <div className="container-page relative flex h-12 items-center justify-between text-sm">
           <div className="flex h-full items-center gap-6 text-foreground/70">
-            <Link
-              to="/hire-a-designer"
+            <a
+              href="/hire-a-designer"
               className="flex h-full items-center border-b-2 border-primary text-primary"
             >
               How it works
-            </Link>
+            </a>
 
             <div
               className="relative flex h-full items-center"
@@ -648,12 +648,12 @@ export function Header() {
               Own a franchise
             </Link>
           </div>
-          <Link
-            to="/hire-a-designer"
+          <a
+            href="/hire-a-designer"
             className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary/90"
           >
             Consult online now
-          </Link>
+          </a>
         </div>
       </div>
     </header>

@@ -300,7 +300,7 @@ export function MagazineCategoryContent({ slug }: { slug: string }) {
               {recentStories.map((article) => (
                 <Link
                   key={article.title}
-                  to="/hire-a-designer#quote-form"
+                  to="/hire-a-designer"
                   className="group"
                 >
                   <article
@@ -384,7 +384,7 @@ export function MagazineCategoryContent({ slug }: { slug: string }) {
                 .map((article) => (
                   <Link
                     key={article.title}
-                    to="/hire-a-designer#quote-form"
+                    to="/hire-a-designer"
                     className="group"
                   >
                     <article
