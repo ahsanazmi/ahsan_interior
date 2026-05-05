@@ -152,4 +152,21 @@
   @media (min-width: 768px) {
     .container-page { padding-inline: 2rem; }
   }
+
+  /* Embla Carousel optimization: pre-size to prevent layout thrashing */
+  [role="region"][aria-roledescription="carousel"] {
+    contain: layout style paint;
+  }
+
+  /* Prevent reflow measurements for carousel content */
+  [role="region"][aria-roledescription="carousel"] > div:first-child > div {
+    contain: layout style paint;
+  }
+
+  /* CarouselItem sizing to prevent Embla re-measurement */
+  [role="group"][aria-roledescription="slide"] {
+    flex-shrink: 0;
+    flex-grow: 0;
+    flex-basis: 100%;
+  }
 }

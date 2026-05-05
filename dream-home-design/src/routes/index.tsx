@@ -100,22 +100,54 @@ const HERO_SLIDES = [
 
 function HomePage() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(false);
 
   useEffect(() => {
     if (!carouselApi) {
       return;
     }
 
+    // Defer auto-scroll initialization using requestIdleCallback to avoid blocking interaction
+    const handleIdleCallback = () => {
+      setIsAutoScrollEnabled(true);
+    };
+
+    if ("requestIdleCallback" in window) {
+      const id = (window as any).requestIdleCallback(handleIdleCallback, { timeout: 3000 });
+      return () => (window as any).cancelIdleCallback(id);
+    } else {
+      // Fallback for browsers without requestIdleCallback
+      const timeoutId = setTimeout(handleIdleCallback, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [carouselApi]);
+
+  useEffect(() => {
+    if (!carouselApi || !isAutoScrollEnabled) {
+      return;
+    }
+
+    // Batch all carousel operations in requestAnimationFrame to prevent layout thrashing
     const interval = window.setInterval(() => {
-      if (carouselApi.canScrollNext()) {
-        carouselApi.scrollNext();
+      if ("requestAnimationFrame" in window) {
+        requestAnimationFrame(() => {
+          if (carouselApi.canScrollNext()) {
+            carouselApi.scrollNext();
+          } else {
+            carouselApi.scrollTo(0);
+          }
+        });
       } else {
-        carouselApi.scrollTo(0);
+        if (carouselApi.canScrollNext()) {
+          carouselApi.scrollNext();
+        } else {
+          carouselApi.scrollTo(0);
+        }
       }
     }, 4500);
 
     return () => window.clearInterval(interval);
-  }, [carouselApi]);
+  }, [carouselApi, isAutoScrollEnabled]);
 
   return (
     <>

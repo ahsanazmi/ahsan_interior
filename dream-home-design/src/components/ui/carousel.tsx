@@ -51,6 +51,7 @@ const Carousel = React.forwardRef<
   );
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
   const [canScrollNext, setCanScrollNext] = React.useState(false);
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
   const onSelect = React.useCallback((api: CarouselApi) => {
     if (!api) {
@@ -103,6 +104,22 @@ const Carousel = React.forwardRef<
       api?.off("select", onSelect);
     };
   }, [api, onSelect]);
+
+  // Defer carousel initialization using requestIdleCallback to avoid blocking main thread
+  React.useEffect(() => {
+    const handleIdleCallback = () => {
+      setIsInitialized(true);
+    };
+
+    if ("requestIdleCallback" in window) {
+      const id = (window as any).requestIdleCallback(handleIdleCallback, { timeout: 2000 });
+      return () => (window as any).cancelIdleCallback(id);
+    } else {
+      // Fallback for browsers without requestIdleCallback
+      const timeoutId = setTimeout(handleIdleCallback, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
 
   return (
     <CarouselContext.Provider
