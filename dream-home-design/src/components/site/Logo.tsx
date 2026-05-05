@@ -8,6 +8,11 @@ export function Logo({ tone = "default" }: { tone?: "default" | "light" }) {
       <img
         src={logoImage}
         alt="NextGen Living Space Private Limited"
+        width={48}
+        height={48}
+        loading="eager"
+        decoding="async"
+        fetchPriority="low"
         className="h-12 w-auto max-w-[9rem] shrink-0 object-contain"
       />
       <span className="flex flex-col leading-none">

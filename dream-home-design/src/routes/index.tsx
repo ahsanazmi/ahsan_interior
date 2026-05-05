@@ -11,14 +11,9 @@ import catKids from "@/assets/cat-kids.jpg";
 import catOffice from "@/assets/cat-office.jpg";
 import catPooja from "@/assets/cat-pooja.jpg";
 import { Button } from "@/components/ui/button";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  type CarouselApi,
-} from "@/components/ui/carousel";
+import React, { Suspense } from "react";
+import type { CarouselApi } from "@/components/ui/carousel";
+const HeroCarousel = React.lazy(() => import("@/components/site/HeroCarousel"));
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -71,7 +66,7 @@ const TESTIMONIALS = [
   },
 ];
 
-const HERO_SLIDES = [
+export const HERO_SLIDES = [
   {
     image: heroLiving,
     alt: "Modern living room with deep blue feature wall",
@@ -154,26 +149,9 @@ function HomePage() {
       {/* HERO */}
       <section className="relative overflow-hidden pt-6 md:pt-8">
         <div className="absolute inset-0">
-          <Carousel setApi={setCarouselApi} opts={{ loop: true }} className="h-full w-full">
-            <CarouselContent className="h-full">
-              {HERO_SLIDES.map((slide) => (
-                <CarouselItem key={slide.label} className="h-full">
-                  <div className="relative h-full min-h-[72vh] md:min-h-[82vh]">
-                    <img
-                      src={slide.image}
-                      alt={slide.alt}
-                      width={1920}
-                      height={1080}
-                      className="h-full w-full object-cover object-[center_35%] md:object-center"
-                    />
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_28%),linear-gradient(135deg,rgba(10,15,35,0.2),rgba(10,15,35,0.84))]" />
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="left-4 hidden h-10 w-10 border-white/25 bg-white/15 text-white backdrop-blur md:inline-flex" />
-            <CarouselNext className="right-4 hidden h-10 w-10 border-white/25 bg-white/15 text-white backdrop-blur md:inline-flex" />
-          </Carousel>
+          <Suspense fallback={<div aria-hidden className="h-full w-full bg-gray-50" />}> 
+            <HeroCarousel setApi={setCarouselApi} />
+          </Suspense>
         </div>
 
         <div className="container-page relative z-10 flex min-h-[72vh] md:min-h-[82vh] flex-col justify-end pb-14 pt-28 text-white">
