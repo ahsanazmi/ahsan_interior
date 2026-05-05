@@ -1,4 +1,11 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://ahsan-interior.onrender.com/api";
+
+// Debug: Log API base URL to console
+if (!import.meta.env.VITE_API_BASE_URL) {
+  console.warn("⚠️ VITE_API_BASE_URL not set, using fallback:", API_BASE_URL);
+} else {
+  console.log("✅ API Base URL:", API_BASE_URL);
+}
 
 export type CityDetails = {
   slug: string;
