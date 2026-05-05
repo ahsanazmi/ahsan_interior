@@ -105,7 +105,12 @@ export function MagazineLanding() {
           <h2 className="mb-8 font-display text-3xl text-plum">Latest Articles</h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {blogs.map((blog) => (
-              <Link key={blog.id} to={`/magazine/blog/${blog.slug}`} className="group">
+              <Link
+                key={blog.id}
+                to="/magazine/blog/$slug"
+                params={{ slug: blog.slug }}
+                className="group"
+              >
                 <article className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-white/85 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-card">
                   <div className="aspect-[4/3] overflow-hidden bg-muted">
                     {blog.cover_image ? (
