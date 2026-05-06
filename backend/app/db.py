@@ -10,12 +10,23 @@ class Base(DeclarativeBase):
     pass
 
 
+_database_url = settings.database_url
+# Some hosted providers (Neon, Heroku, etc.) provide DATABASE_URL as
+# `postgres://...` or `postgresql://...`. SQLAlchemy will try to load the
+# `psycopg2` DBAPI for plain `postgresql://`. We use psycopg (psycopg3), so
+# normalize common prefixes to `postgresql+psycopg://` to avoid
+# ModuleNotFoundError: No module named 'psycopg2'
+if _database_url.startswith("postgres://"):
+    _database_url = _database_url.replace("postgres://", "postgresql+psycopg://", 1)
+elif _database_url.startswith("postgresql://") and "+psycopg" not in _database_url:
+    _database_url = _database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
 engine = create_engine(
-    settings.database_url,
+    _database_url,
     pool_pre_ping=True,
     pool_size=5,
     max_overflow=10,
-    future=True
+    future=True,
 )
 
 
