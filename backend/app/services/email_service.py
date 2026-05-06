@@ -1,20 +1,14 @@
 """Email notification service for appointments"""
 
 import smtplib
-import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
 
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SENDER_EMAIL = os.getenv("SENDER_EMAIL", "noreply@nextgenlivingspace.com")
+from app.core.config import settings
 
 def send_appointment_confirmation(name: str, email: str, date: str, time: str, city: str, external_id: str) -> bool:
     """Send appointment confirmation email"""
-    if not SMTP_USER or not SMTP_PASSWORD:
+    if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password:
         print("⚠️  Email credentials not configured")
         return False
     
@@ -50,14 +44,15 @@ def send_appointment_confirmation(name: str, email: str, date: str, time: str, c
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = SENDER_EMAIL
+        msg['From'] = settings.mail_from or settings.smtp_username
         msg['To'] = email
         
         msg.attach(MIMEText(html_body, 'html'))
         
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+            if settings.smtp_use_tls:
+                server.starttls()
+            server.login(settings.smtp_username, settings.smtp_password)
             server.send_message(msg)
         
         print(f"✅ Confirmation email sent to {email}")
@@ -69,7 +64,7 @@ def send_appointment_confirmation(name: str, email: str, date: str, time: str, c
 
 def send_appointment_reminder(name: str, email: str, date: str, time: str, city: str) -> bool:
     """Send appointment reminder email (24 hours before)"""
-    if not SMTP_USER or not SMTP_PASSWORD:
+    if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password:
         return False
     
     subject = f"Reminder: Your Appointment Tomorrow at {time}"
@@ -103,14 +98,15 @@ def send_appointment_reminder(name: str, email: str, date: str, time: str, city:
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = SENDER_EMAIL
+        msg['From'] = settings.mail_from or settings.smtp_username
         msg['To'] = email
         
         msg.attach(MIMEText(html_body, 'html'))
         
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+            if settings.smtp_use_tls:
+                server.starttls()
+            server.login(settings.smtp_username, settings.smtp_password)
             server.send_message(msg)
         
         print(f"✅ Reminder email sent to {email}")
@@ -122,7 +118,7 @@ def send_appointment_reminder(name: str, email: str, date: str, time: str, city:
 
 def send_status_update_email(name: str, email: str, status: str, city: str) -> bool:
     """Send status update email when admin changes appointment status"""
-    if not SMTP_USER or not SMTP_PASSWORD:
+    if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password:
         return False
     
     status_messages = {
@@ -161,14 +157,15 @@ def send_status_update_email(name: str, email: str, status: str, city: str) -> b
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = SENDER_EMAIL
+        msg['From'] = settings.mail_from or settings.smtp_username
         msg['To'] = email
         
         msg.attach(MIMEText(html_body, 'html'))
         
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+            if settings.smtp_use_tls:
+                server.starttls()
+            server.login(settings.smtp_username, settings.smtp_password)
             server.send_message(msg)
         
         print(f"✅ Status update email sent to {email}")

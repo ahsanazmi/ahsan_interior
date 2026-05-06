@@ -218,12 +218,13 @@ def _send_twilio_sms(*, phone: str, message: str) -> None:
 
 
 def _send_email(*, to_email: str, subject: str, body: str, html: str | None = None) -> None:
-    if not settings.smtp_host or not settings.mail_from:
+    sender_email = settings.mail_from or settings.smtp_username
+    if not settings.smtp_host or not sender_email:
         _debug("Email", to_email, f"{subject}\n\n{html or body}")
         return
 
     message = EmailMessage()
-    message["From"] = settings.mail_from
+    message["From"] = sender_email
     message["To"] = to_email
     message["Subject"] = subject
     message.set_content(body)
