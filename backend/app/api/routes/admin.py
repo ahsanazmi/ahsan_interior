@@ -4,17 +4,150 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sa_func
 
-from app.core.deps import require_admin
+from app.core.deps import allow_admin_or_cron, require_admin
 from app.db import get_db
 from app.models.appointment import Appointment
 from app.models.lead import Lead
+from app.models.marketing_campaign import MarketingCampaign
 from app.models.price_calculation import PriceCalculation
 from app.models.quote import QuoteRequest
 from app.models.user import User
-from app.schemas.admin import AppointmentOut, DashboardStats
+from app.schemas.admin import (
+    AppointmentOut,
+    DashboardStats,
+    MarketingCampaignCreate,
+    MarketingCampaignOut,
+    MarketingCampaignUpdate,
+)
 from app.schemas.appointment import AppointmentCreate
+from app.services.marketing import dispatch_marketing_campaign
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def _campaign_out(row: MarketingCampaign) -> MarketingCampaignOut:
+    return MarketingCampaignOut(
+        id=row.id,
+        external_id=row.external_id,
+        campaign_name=row.campaign_name,
+        channel=row.channel,
+        audience=row.audience,
+        subject=row.subject,
+        body=row.body,
+        cta_text=row.cta_text,
+        cta_url=row.cta_url,
+        scheduled_for=row.scheduled_for,
+        status=row.status,
+        total_recipients=row.total_recipients,
+        sent_count=row.sent_count,
+        last_error=row.last_error,
+        created_at=row.created_at,
+        sent_at=row.sent_at,
+    )
+
+
+@router.get("/marketing-campaigns", response_model=list[MarketingCampaignOut])
+def list_marketing_campaigns(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[MarketingCampaignOut]:
+    rows = db.query(MarketingCampaign).order_by(MarketingCampaign.created_at.desc()).limit(100).all()
+    return [_campaign_out(row) for row in rows]
+
+
+@router.post("/marketing-campaigns", response_model=MarketingCampaignOut, status_code=status.HTTP_201_CREATED)
+def create_marketing_campaign(
+    payload: MarketingCampaignCreate,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MarketingCampaignOut:
+    campaign = MarketingCampaign(
+        campaign_name=payload.campaign_name,
+        channel=payload.channel,
+        audience=payload.audience,
+        subject=payload.subject,
+        body=payload.body,
+        cta_text=payload.cta_text,
+        cta_url=payload.cta_url,
+        scheduled_for=payload.scheduled_for,
+        status="scheduled" if payload.scheduled_for else "draft",
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    return _campaign_out(campaign)
+
+
+@router.put("/marketing-campaigns/{campaign_id}", response_model=MarketingCampaignOut)
+def update_marketing_campaign(
+    campaign_id: int,
+    payload: MarketingCampaignUpdate,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MarketingCampaignOut:
+    campaign = db.query(MarketingCampaign).filter(MarketingCampaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    for field in ["campaign_name", "channel", "audience", "subject", "body", "cta_text", "cta_url", "scheduled_for", "status"]:
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(campaign, field, value)
+
+    if campaign.status == "draft" and campaign.scheduled_for:
+        campaign.status = "scheduled"
+
+    db.commit()
+    db.refresh(campaign)
+    return _campaign_out(campaign)
+
+
+@router.delete("/marketing-campaigns/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_marketing_campaign(
+    campaign_id: int,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    campaign = db.query(MarketingCampaign).filter(MarketingCampaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    db.delete(campaign)
+    db.commit()
+
+
+@router.post("/marketing-campaigns/{campaign_id}/send", response_model=MarketingCampaignOut)
+def send_marketing_campaign_now(
+    campaign_id: int,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MarketingCampaignOut:
+    campaign = db.query(MarketingCampaign).filter(MarketingCampaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return _campaign_out(dispatch_marketing_campaign(db, campaign))
+
+
+@router.post("/marketing-campaigns/dispatch-due")
+def dispatch_due_marketing_campaigns(
+    _auth: User | None = Depends(allow_admin_or_cron),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(timezone.utc)
+    due_campaigns = (
+        db.query(MarketingCampaign)
+        .filter(MarketingCampaign.status == "scheduled")
+        .filter(MarketingCampaign.scheduled_for != None)
+        .filter(MarketingCampaign.scheduled_for <= now)
+        .order_by(MarketingCampaign.scheduled_for.asc())
+        .all()
+    )
+
+    processed: list[str] = []
+    for campaign in due_campaigns:
+        processed.append(campaign.external_id)
+        dispatch_marketing_campaign(db, campaign)
+
+    return {"processed": len(processed), "campaigns": processed}
 
 
 @router.get("/stats", response_model=DashboardStats)

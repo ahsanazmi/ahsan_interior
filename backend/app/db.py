@@ -54,6 +54,7 @@ def init_db() -> None:
         calculator,
         image,
         lead,
+        marketing_campaign,
         offer,
         price_calculation,
         quote,

@@ -1,5 +1,6 @@
 import json
 import base64
+import html
 import smtplib
 import urllib.error
 import urllib.request
@@ -7,6 +8,36 @@ from email.message import EmailMessage
 from urllib.parse import quote, urlencode
 
 from app.core.config import settings
+
+
+def send_marketing_email(
+    *,
+    to_email: str,
+    name: str,
+    subject: str,
+    body: str,
+    cta_text: str = "Book a consultation",
+    cta_url: str | None = None,
+    city: str | None = None,
+) -> None:
+    _send_email(
+        to_email=to_email,
+        subject=subject,
+        body=body,
+        html=_marketing_template(
+            name=name,
+            subject=subject,
+            body=body,
+            cta_text=cta_text,
+            cta_url=cta_url,
+            city=city,
+        ),
+    )
+
+
+def send_marketing_whatsapp(*, phone: str, name: str, body: str, city: str | None = None) -> None:
+    city_text = f" in {city}" if city else ""
+    send_whatsapp_message(phone=phone, message=f"Hi {name}{city_text}, {body.strip()}")
 
 
 def send_appointment_product_email(
@@ -286,4 +317,55 @@ def _promotion_template(*, name: str, city: str | None) -> str:
       </tr>
     </table>
   </body>
+</html>"""
+
+
+def _marketing_template(
+        *,
+        name: str,
+        subject: str,
+        body: str,
+        cta_text: str,
+        cta_url: str | None,
+        city: str | None,
+) -> str:
+        safe_name = html.escape(name)
+        safe_subject = html.escape(subject)
+        safe_body = html.escape(body).replace("\n", "<br>")
+        safe_cta_text = html.escape(cta_text)
+        safe_cta_url = html.escape(cta_url or "https://nextgenlivingspace.com/hire-a-designer")
+        city_text = f" in {html.escape(city)}" if city else ""
+        return f"""<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{safe_subject}</title>
+    </head>
+    <body style="margin:0;background:#f6f1eb;font-family:Arial,Helvetica,sans-serif;color:#24131f;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f1eb;padding:24px 12px;">
+            <tr>
+                <td align="center">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eadfd6;">
+                        <tr>
+                            <td style="background:#3c1432;color:#ffffff;padding:28px 30px;">
+                                <p style="margin:0 0 8px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#e8c7d9;">NextGen Living Space</p>
+                                <h1 style="margin:0;font-size:30px;line-height:1.15;">{safe_subject}</h1>
+                                <p style="margin:12px 0 0;color:#f6eaf1;font-size:15px;line-height:1.6;">Hi {safe_name}, a refined interior update for homes{city_text}.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:28px 30px;">
+                                <div style="font-size:15px;line-height:1.8;color:#4b3742;">{safe_body}</div>
+                                <div style="margin-top:24px;text-align:center;">
+                                    <a href="{safe_cta_url}" style="display:inline-block;background:#3c1432;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:bold;">{safe_cta_text}</a>
+                                </div>
+                                <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#7b6873;text-align:center;">Premium design. Clear timelines. End-to-end execution.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
 </html>"""

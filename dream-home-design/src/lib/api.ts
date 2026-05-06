@@ -372,6 +372,69 @@ export function fetchAdminStats() {
   return requestJson<DashboardStats>("/admin/stats", { headers: authHeaders() });
 }
 
+export type MarketingCampaign = {
+  id: number;
+  external_id: string;
+  campaign_name: string;
+  channel: "email" | "whatsapp" | "both" | string;
+  audience: "leads" | "appointments" | "users" | "all" | string;
+  subject: string;
+  body: string;
+  cta_text: string;
+  cta_url: string | null;
+  scheduled_for: string | null;
+  status: "draft" | "scheduled" | "sending" | "sent" | "failed" | string;
+  total_recipients: number;
+  sent_count: number;
+  last_error: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
+
+export type MarketingCampaignPayload = {
+  campaign_name: string;
+  channel: "email" | "whatsapp" | "both" | string;
+  audience: "leads" | "appointments" | "users" | "all" | string;
+  subject: string;
+  body: string;
+  cta_text?: string;
+  cta_url?: string | null;
+  scheduled_for?: string | null;
+};
+
+export function fetchAdminMarketingCampaigns() {
+  return requestJson<MarketingCampaign[]>("/admin/marketing-campaigns", { headers: authHeaders() });
+}
+
+export function createAdminMarketingCampaign(payload: MarketingCampaignPayload) {
+  return requestJson<MarketingCampaign>("/admin/marketing-campaigns", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: authHeaders(),
+  });
+}
+
+export function sendAdminMarketingCampaign(campaignId: number) {
+  return requestJson<MarketingCampaign>(`/admin/marketing-campaigns/${campaignId}/send`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export function dispatchDueMarketingCampaigns() {
+  return requestJson<{ processed: number; campaigns: string[] }>("/admin/marketing-campaigns/dispatch-due", {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export function deleteAdminMarketingCampaign(campaignId: number) {
+  return fetch(`${API_BASE_URL}/admin/marketing-campaigns/${campaignId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
+}
+
 export function fetchAdminAppointments() {
   return requestJson<BookingItem[]>("/admin/appointments", { headers: authHeaders() });
 }

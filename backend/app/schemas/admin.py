@@ -43,3 +43,44 @@ class DashboardStats(BaseModel):
     total_quotes: int = 0
     total_price_calculations: int = 0
     total_users: int
+
+
+class MarketingCampaignBase(BaseModel):
+    campaign_name: str
+    channel: str
+    audience: str
+    subject: str
+    body: str
+    cta_text: str = "Book a consultation"
+    cta_url: str | None = None
+    scheduled_for: datetime | None = None
+
+
+class MarketingCampaignCreate(MarketingCampaignBase):
+    pass
+
+
+class MarketingCampaignUpdate(BaseModel):
+    campaign_name: str | None = None
+    channel: str | None = None
+    audience: str | None = None
+    subject: str | None = None
+    body: str | None = None
+    cta_text: str | None = None
+    cta_url: str | None = None
+    scheduled_for: datetime | None = None
+    status: str | None = None
+
+
+class MarketingCampaignOut(MarketingCampaignBase):
+    id: int
+    external_id: str
+    status: str
+    total_recipients: int = 0
+    sent_count: int = 0
+    last_error: str | None = None
+    created_at: datetime
+    sent_at: datetime | None = None
+
+    class Config:
+        from_attributes = True

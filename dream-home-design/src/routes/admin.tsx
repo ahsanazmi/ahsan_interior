@@ -10,6 +10,7 @@ import {
 import {
   CalendarDays, Users, Clock, LogOut, ShieldCheck, Loader2, MapPin,
   UserPlus, Image, FileText, Tag, Plus, Trash2, Upload, Calculator, Edit2, X,
+  Megaphone, Mail, MessageSquare, Sparkles, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,9 @@ import {
   deleteAdminQuote, updateAdminQuote, deleteAdminLead, updateAdminLead,
   fetchAdminPriceCalculations, deleteAdminPriceCalculation, updateAdminPriceCalculation,
   fetchAdminCalculatorSettings, updateAdminCalculatorSettings,
+  fetchAdminMarketingCampaigns, createAdminMarketingCampaign,
+  sendAdminMarketingCampaign, deleteAdminMarketingCampaign,
+  dispatchDueMarketingCampaigns,
   type DashboardStats, type BookingItem, type LeadItem,
   type BlogItem, type BlogPayload,
   type ImageItem,
@@ -31,6 +35,7 @@ import {
   type QuoteItem, type PriceCalculationItem,
   type CalculatorSettings,
   type AppointmentPayload,
+  type MarketingCampaign, type MarketingCampaignPayload,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -44,7 +49,7 @@ export const Route = createFileRoute("/admin")({
   }),
 });
 
-type Tab = "appointments" | "leads" | "quotes" | "calculation-history" | "calculator" | "blogs" | "images" | "offers";
+type Tab = "appointments" | "leads" | "quotes" | "calculation-history" | "calculator" | "blogs" | "images" | "offers" | "marketing";
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/api$/, "");
 
@@ -61,6 +66,7 @@ function AdminDashboard() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [calculatorSettings, setCalculatorSettings] = useState<CalculatorSettings | null>(null);
+  const [marketingCampaigns, setMarketingCampaigns] = useState<MarketingCampaign[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,8 +80,9 @@ function AdminDashboard() {
       fetchAdminStats(), fetchAdminAppointments(), fetchAdminLeads(),
       fetchAdminBlogs(), fetchAdminImages(), fetchAdminOffers(),
       fetchAdminQuotes(), fetchAdminCalculatorSettings(), fetchAdminPriceCalculations(),
+      fetchAdminMarketingCampaigns(),
     ])
-      .then(([s, a, l, b, i, o, q, c, p]) => {
+      .then(([s, a, l, b, i, o, q, c, p, m]) => {
         if (!mounted) return;
         if (s.status === "fulfilled") setStats(s.value);
         if (a.status === "fulfilled") setAppointments(a.value);
@@ -86,8 +93,9 @@ function AdminDashboard() {
         if (q.status === "fulfilled") setQuotes(q.value);
         if (c.status === "fulfilled") setCalculatorSettings(c.value);
         if (p.status === "fulfilled") setPriceCalculations(p.value);
+        if (m.status === "fulfilled") setMarketingCampaigns(m.value);
 
-        if ([s, a, l, b, i, o, q, c, p].some((result) => result.status === "rejected")) {
+        if ([s, a, l, b, i, o, q, c, p, m].some((result) => result.status === "rejected")) {
           toast.error("Some admin data could not load. Please check backend/database.");
         }
       })
@@ -111,6 +119,7 @@ function AdminDashboard() {
     { key: "blogs", label: "Blogs", icon: FileText },
     { key: "images", label: "Images", icon: Image },
     { key: "offers", label: "Pricing", icon: Tag },
+    { key: "marketing", label: "Marketing", icon: Megaphone },
   ];
 
   return (
@@ -179,6 +188,12 @@ function AdminDashboard() {
               {tab === "blogs" && <BlogsTab data={blogs} onChange={setBlogs} />}
               {tab === "images" && <ImagesTab data={images} onChange={setImages} />}
               {tab === "offers" && <OffersTab data={offers} onChange={setOffers} />}
+              {tab === "marketing" && (
+                <MarketingTab
+                  data={marketingCampaigns}
+                  onChange={setMarketingCampaigns}
+                />
+              )}
             </>
           )}
         </div>
@@ -1207,6 +1222,349 @@ function OffersTab({ data, onChange }: { data: OfferItem[]; onChange: (v: OfferI
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function MarketingTab({
+  data,
+  onChange,
+}: {
+  data: MarketingCampaign[];
+  onChange: (v: MarketingCampaign[]) => void;
+}) {
+  const [show, setShow] = useState(false);
+  const [campaignName, setCampaignName] = useState("Premium Home Design Campaign");
+  const [channel, setChannel] = useState<MarketingCampaignPayload["channel"]>("email");
+  const [audience, setAudience] = useState<MarketingCampaignPayload["audience"]>("all");
+  const [subject, setSubject] = useState("A refined way to upgrade your home this season");
+  const [body, setBody] = useState(
+    "Hello,\n\nWe are opening a limited batch of interior consultations for homeowners who want a premium, stress-free design experience. Our team will guide you through layout planning, material selection, budgeting, and execution.\n\nIf you are considering a full home refresh or a focused room upgrade, this is the right time to connect."
+  );
+  const [ctaText, setCtaText] = useState("Book a consultation");
+  const [ctaUrl, setCtaUrl] = useState("https://nextgenlivingspace.com/hire-a-designer");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [sendingDue, setSendingDue] = useState(false);
+
+  const templates = {
+    launch: {
+      campaignName: "New Project Launch",
+      subject: "A refined way to upgrade your home this season",
+      body:
+        "Hello,\n\nWe are opening a limited batch of interior consultations for homeowners who want a premium, stress-free design experience. Our team will guide you through layout planning, material selection, budgeting, and execution.\n\nIf you are considering a full home refresh or a focused room upgrade, this is the right time to connect.",
+      ctaText: "Book a consultation",
+    },
+    offer: {
+      campaignName: "Exclusive Offer Campaign",
+      subject: "Limited-time interior offer for your dream home",
+      body:
+        "Hello,\n\nEnjoy a carefully designed home transformation with a transparent process, expert guidance, and premium finishes. This limited-time offer is ideal for homeowners who want to begin planning with confidence and clarity.\n\nReserve your consultation today and receive a tailored design roadmap.",
+      ctaText: "Reserve my slot",
+    },
+    nurture: {
+      campaignName: "Lead Nurture Campaign",
+      subject: "Let’s bring your interior vision back to life",
+      body:
+        "Hello,\n\nIf you are still exploring ideas for your home, our team can help you move from inspiration to execution. We will help you define the layout, estimate the investment, and shape a design that feels elegant and practical.\n\nReply to this message or book a consultation to continue the conversation.",
+      ctaText: "Continue planning",
+    },
+  } as const;
+
+  if (data.length === 0 && !show) {
+    return (
+      <div className="rounded-2xl border border-border bg-white p-8 text-center shadow-soft">
+        <Megaphone className="mx-auto h-10 w-10 text-primary" />
+        <h2 className="mt-3 text-lg font-semibold text-plum">Marketing campaigns</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Create professional email or WhatsApp campaigns, schedule them, and send them to your leads.
+        </p>
+        <Button className="mt-4 rounded-full" onClick={() => setShow(true)}>
+          Create campaign
+        </Button>
+      </div>
+    );
+  }
+
+  const resetForm = () => {
+    setCampaignName("Premium Home Design Campaign");
+    setChannel("email");
+    setAudience("all");
+    setSubject("A refined way to upgrade your home this season");
+    setBody(
+      "Hello,\n\nWe are opening a limited batch of interior consultations for homeowners who want a premium, stress-free design experience. Our team will guide you through layout planning, material selection, budgeting, and execution.\n\nIf you are considering a full home refresh or a focused room upgrade, this is the right time to connect."
+    );
+    setCtaText("Book a consultation");
+    setCtaUrl("https://nextgenlivingspace.com/hire-a-designer");
+    setScheduledDate("");
+    setScheduledTime("");
+  };
+
+  const applyTemplate = (key: keyof typeof templates) => {
+    const template = templates[key];
+    setShow(true);
+    setCampaignName(template.campaignName);
+    setSubject(template.subject);
+    setBody(template.body);
+    setCtaText(template.ctaText);
+  };
+
+  const handleCreate = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const scheduled_for = scheduledDate && scheduledTime
+        ? new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
+        : null;
+      const payload: MarketingCampaignPayload = {
+        campaign_name: campaignName,
+        channel,
+        audience,
+        subject,
+        body,
+        cta_text: ctaText,
+        cta_url: ctaUrl,
+        scheduled_for,
+      };
+      const campaign = await createAdminMarketingCampaign(payload);
+      onChange([campaign, ...data]);
+      toast.success("Marketing campaign saved");
+      setShow(false);
+      resetForm();
+    } catch {
+      toast.error("Failed to save marketing campaign");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSendNow = async (id: number) => {
+    try {
+      const updated = await sendAdminMarketingCampaign(id);
+      onChange(data.map((campaign) => (campaign.id === id ? updated : campaign)));
+      toast.success("Campaign sent successfully");
+    } catch {
+      toast.error("Failed to send campaign");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this campaign?")) return;
+    try {
+      await deleteAdminMarketingCampaign(id);
+      onChange(data.filter((campaign) => campaign.id !== id));
+      toast.success("Campaign deleted");
+    } catch {
+      toast.error("Failed to delete campaign");
+    }
+  };
+
+  const handleDispatchDue = async () => {
+    setSendingDue(true);
+    try {
+      const result = await dispatchDueMarketingCampaigns();
+      const refreshed = await fetchAdminMarketingCampaigns();
+      onChange(refreshed);
+      toast.success(`Processed ${result.processed} scheduled campaign(s)`);
+    } catch {
+      toast.error("Failed to process scheduled campaigns");
+    } finally {
+      setSendingDue(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-plum">Marketing Studio</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Create polished email and WhatsApp campaigns, schedule them, or send them instantly.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" className="rounded-full gap-2" onClick={() => applyTemplate("launch")}>
+              <Sparkles className="h-4 w-4" /> Launch template
+            </Button>
+            <Button type="button" variant="outline" className="rounded-full gap-2" onClick={() => applyTemplate("offer")}>
+              <Sparkles className="h-4 w-4" /> Offer template
+            </Button>
+            <Button type="button" variant="outline" className="rounded-full gap-2" onClick={() => applyTemplate("nurture")}>
+              <Sparkles className="h-4 w-4" /> Nurture template
+            </Button>
+            <Button type="button" className="rounded-full" onClick={handleDispatchDue} disabled={sendingDue}>
+              {sendingDue ? "Processing..." : "Run scheduled sends"}
+            </Button>
+          </div>
+        </div>
+
+        {show && (
+          <form onSubmit={handleCreate} className="mt-6 space-y-4 rounded-2xl border border-border bg-muted/20 p-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>Campaign name</Label>
+                <Input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Premium Home Design Campaign" required />
+              </div>
+              <div>
+                <Label>Audience</Label>
+                <select value={audience} onChange={(e) => setAudience(e.target.value as MarketingCampaignPayload["audience"])} className="mt-1 h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
+                  <option value="all">All contacts</option>
+                  <option value="leads">Leads</option>
+                  <option value="appointments">Appointments</option>
+                  <option value="users">Registered users</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>Channel</Label>
+                <div className="mt-1 grid grid-cols-3 gap-2">
+                  {(["email", "whatsapp", "both"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setChannel(value)}
+                      className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${channel === value ? "border-primary bg-primary text-white" : "border-border bg-white text-foreground hover:bg-muted/30"}`}
+                    >
+                      {value === "email" ? <Mail className="h-4 w-4" /> : value === "whatsapp" ? <MessageSquare className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />}
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label>Schedule</Label>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  <Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} />
+                  <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label>Subject</Label>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="A refined way to upgrade your home this season" required />
+            </div>
+
+            <div>
+              <Label>Message</Label>
+              <textarea
+                className="mt-1 min-h-40 w-full rounded-lg border border-border bg-white p-3 text-sm"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write a polished message for your audience..."
+                required
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Use short paragraphs and a clear CTA. The preview will look polished in email and readable in WhatsApp.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>CTA text</Label>
+                <Input value={ctaText} onChange={(e) => setCtaText(e.target.value)} placeholder="Book a consultation" />
+              </div>
+              <div>
+                <Label>CTA URL</Label>
+                <Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://nextgenlivingspace.com/hire-a-designer" />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit" className="rounded-full" disabled={saving}>{saving ? "Saving..." : "Save campaign"}</Button>
+              <Button type="button" variant="outline" className="rounded-full" onClick={resetForm}>Reset</Button>
+              <Button type="button" variant="ghost" className="rounded-full" onClick={() => setShow(false)}>Close</Button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
+          <h3 className="text-base font-semibold text-plum">Professional copy guidance</h3>
+          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <li>Lead with a clear benefit: premium design, limited slots, or a consultation offer.</li>
+            <li>Keep one primary CTA so the message feels focused and premium.</li>
+            <li>Use short paragraphs, not long blocks, especially for WhatsApp.</li>
+            <li>Prefer one campaign per audience segment for stronger conversion.</li>
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
+          <h3 className="text-base font-semibold text-plum">Preview</h3>
+          <div className="mt-3 rounded-2xl border border-border bg-muted/20 p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">NextGen Living Space</p>
+            <h4 className="mt-2 text-xl font-semibold text-plum">{subject}</h4>
+            <div className="mt-3 whitespace-pre-line text-sm leading-7 text-foreground">{body}</div>
+            <div className="mt-4 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white">{ctaText}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-base font-semibold text-plum">Scheduled campaigns</h3>
+        {data.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-border bg-white p-8 text-center text-sm text-muted-foreground shadow-soft">
+            No campaigns yet. Use a template above to create your first marketing message.
+          </p>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {data.map((campaign) => (
+              <div key={campaign.external_id} className="rounded-2xl border border-border bg-white p-5 shadow-soft">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${campaign.status === "sent" ? "bg-emerald-100 text-emerald-700" : campaign.status === "failed" ? "bg-red-100 text-red-700" : campaign.status === "sending" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}>
+                        {campaign.status}
+                      </span>
+                      <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold uppercase text-muted-foreground">{campaign.channel}</span>
+                      <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold uppercase text-muted-foreground">{campaign.audience}</span>
+                    </div>
+                    <h4 className="mt-2 text-base font-semibold text-plum">{campaign.campaign_name}</h4>
+                    <p className="mt-1 text-sm text-muted-foreground">{campaign.subject}</p>
+                  </div>
+                  <button type="button" onClick={() => handleDelete(campaign.id)} className="text-red-400 hover:text-red-600">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-2xl bg-muted/20 p-4">
+                  <div className="text-sm leading-7 text-foreground whitespace-pre-line">{campaign.body}</div>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>Recipients: {campaign.sent_count}/{campaign.total_recipients}</span>
+                    <span>·</span>
+                    <span>{campaign.scheduled_for ? new Date(campaign.scheduled_for).toLocaleString() : "No schedule"}</span>
+                    {campaign.last_error && (
+                      <>
+                        <span>·</span>
+                        <span className="text-red-600">{campaign.last_error}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {campaign.status !== "sent" && (
+                    <Button type="button" size="sm" className="rounded-full gap-2" onClick={() => handleSendNow(campaign.id)}>
+                      <Send className="h-4 w-4" /> Send now
+                    </Button>
+                  )}
+                  <a
+                    href={campaign.cta_url || "https://nextgenlivingspace.com/hire-a-designer"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                  >
+                    Open CTA
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
