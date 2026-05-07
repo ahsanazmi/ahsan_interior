@@ -244,7 +244,6 @@ function AppointmentsTab({ data, onDelete }: { data: BookingItem[]; onDelete: (i
       preferred_time: a.preferred_time,
       whatsapp_updates: a.whatsapp_updates,
       notes: a.notes || "",
-      status: a.status,
     });
   };
 
@@ -446,6 +445,12 @@ function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number)
 
   if (data.length === 0) return <p className="p-8 text-center text-muted-foreground">No leads yet.</p>;
 
+  const formatLeadSource = (source: string) => {
+    if (source === "meta-lead-ads") return "Meta Lead Ads";
+    if (source === "city-page") return "Website Lead";
+    return source.replace(/[-_]/g, " ");
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this lead?")) return;
     try {
@@ -491,6 +496,9 @@ function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number)
         />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
+          <div className="border-b border-border bg-muted/20 px-5 py-3 text-sm text-muted-foreground">
+            Showing all captured leads, including Meta Lead Ads submissions.
+          </div>
           <table className="w-full min-w-[850px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40">
               <tr>{["Name","Email","Phone","City","WhatsApp","Source","Date","Actions"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
@@ -503,7 +511,7 @@ function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number)
                   <td className="px-5 py-3 text-muted-foreground">{l.phone}</td>
                   <td className="px-5 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{l.city}</td>
                   <td className="px-5 py-3">{l.whatsapp_updates ? "✅" : "—"}</td>
-                  <td className="px-5 py-3"><span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase text-amber-700">{l.source}</span></td>
+                  <td className="px-5 py-3"><span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase text-amber-700">{formatLeadSource(l.source)}</span></td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(l.created_at).toLocaleDateString()}</td>
                   <td className="px-5 py-3 flex gap-2">
                     <button onClick={() => handleEdit(l)} className="text-blue-600 hover:text-blue-700" title="Edit"><Edit2 className="h-4 w-4" /></button>
@@ -1247,6 +1255,7 @@ function MarketingTab({
   const [scheduledTime, setScheduledTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [sendingDue, setSendingDue] = useState(false);
+  const [sendingCampaignId, setSendingCampaignId] = useState<number | null>(null);
 
   const templates = {
     launch: {
@@ -1340,12 +1349,17 @@ function MarketingTab({
   };
 
   const handleSendNow = async (id: number) => {
+    setSendingCampaignId(id);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
     try {
       const updated = await sendAdminMarketingCampaign(id);
       onChange(data.map((campaign) => (campaign.id === id ? updated : campaign)));
       toast.success("Campaign sent successfully");
     } catch {
       toast.error("Failed to send campaign");
+    } finally {
+      setSendingCampaignId((current) => (current === id ? null : current));
     }
   };
 
@@ -1547,8 +1561,16 @@ function MarketingTab({
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {campaign.status !== "sent" && (
-                    <Button type="button" size="sm" className="rounded-full gap-2" onClick={() => handleSendNow(campaign.id)}>
-                      <Send className="h-4 w-4" /> Send now
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="rounded-full gap-2"
+                      onClick={() => handleSendNow(campaign.id)}
+                      disabled={sendingCampaignId === campaign.id}
+                      aria-busy={sendingCampaignId === campaign.id}
+                    >
+                      <Send className={`h-4 w-4 ${sendingCampaignId === campaign.id ? "animate-pulse" : ""}`} />
+                      {sendingCampaignId === campaign.id ? "Sending..." : "Send now"}
                     </Button>
                   )}
                   <a

@@ -17,7 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { getCityDetails, submitAppointment, type CityDetails } from "@/lib/api";
+import { getCityDetails, submitLead, type CityDetails } from "@/lib/api";
 
 export const Route = createFileRoute("/cities/$city")({
   component: CityInteriorsPage,
@@ -39,8 +39,6 @@ function LeadForm({ city }: { city: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [preferredDate, setPreferredDate] = useState("");
-  const [preferredTime, setPreferredTime] = useState("");
   const [whatsappUpdates, setWhatsappUpdates] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -52,17 +50,11 @@ function LeadForm({ city }: { city: string }) {
     setStatusMessage(null);
 
     try {
-      if (!preferredDate || !preferredTime) {
-        throw new Error("Please choose a preferred date and time.");
-      }
-
-      const response = await submitAppointment({
+      const response = await submitLead({
         name,
         email,
         phone,
         city,
-        preferred_date: preferredDate,
-        preferred_time: preferredTime,
         whatsapp_updates: whatsappUpdates,
         source: "city-page",
       });
@@ -71,8 +63,6 @@ function LeadForm({ city }: { city: string }) {
       setName("");
       setEmail("");
       setPhone("");
-      setPreferredDate("");
-      setPreferredTime("");
       setWhatsappUpdates(true);
     } catch (error) {
       setStatusType("error");
@@ -84,15 +74,11 @@ function LeadForm({ city }: { city: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="rounded-lg bg-card p-8 text-foreground shadow-card">
-      <h2 className="text-2xl font-bold text-plum">Book an appointment</h2>
+      <h2 className="text-2xl font-bold text-plum">Get a free consultation</h2>
       <div className="mt-6 space-y-4">
         <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name" className="h-12" />
         <Input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="Email ID" className="h-12" />
         <Input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Phone number" className="h-12" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input value={preferredDate} onChange={(event) => setPreferredDate(event.target.value)} type="date" className="h-12" />
-          <Input value={preferredTime} onChange={(event) => setPreferredTime(event.target.value)} type="time" className="h-12" />
-        </div>
         <button
           type="button"
           onClick={() => setWhatsappUpdates((current) => !current)}
@@ -105,7 +91,7 @@ function LeadForm({ city }: { city: string }) {
         </button>
         <Input value={city} readOnly className="h-12" />
         <Button type="submit" className="h-12 w-full rounded-full" disabled={isSubmitting}>
-          {isSubmitting ? "Booking..." : "Book appointment"}
+          {isSubmitting ? "Submitting..." : "Request callback"}
         </Button>
         {statusMessage ? (
           <p className={statusType === "success" ? "text-sm text-emerald-600" : "text-sm text-red-600"}>

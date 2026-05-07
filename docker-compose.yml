@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: interior-backend
+    ports:
+      - "10000:10000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/interior_db
+      - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
+      - META_VERIFY_TOKEN=${META_VERIFY_TOKEN}
+      - META_ACCESS_TOKEN=${META_ACCESS_TOKEN}
+    depends_on:
+      - db
+    networks:
+      - interior-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./dream-home-design
+      dockerfile: Dockerfile
+    container_name: interior-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:10000/api
+    depends_on:
+      - backend
+    networks:
+      - interior-network
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: interior-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=interior_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - interior-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  interior-network:
+    driver: bridge

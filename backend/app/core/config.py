@@ -22,6 +22,15 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("MAIL_FROM", "SENDER_EMAIL"),
     )
+    meta_verify_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("META_VERIFY_TOKEN", "META_WEBHOOK_VERIFY_TOKEN"),
+    )
+    meta_access_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("META_ACCESS_TOKEN", "META_PAGE_ACCESS_TOKEN"),
+    )
+    meta_graph_version: str = "v19.0"
     sms_provider: str | None = None
     sms_api_key: str | None = None
     sms_sender_id: str | None = None

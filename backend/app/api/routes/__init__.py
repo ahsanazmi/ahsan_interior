@@ -14,6 +14,7 @@ from app.api.routes.price_calculations import router as price_calculations_route
 from app.api.routes.public import router as public_router
 from app.api.routes.quotes import router as quotes_router
 from app.api.routes.user_dashboard import router as user_dashboard_router
+from app.api.routes.webhooks import router as webhooks_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
@@ -30,3 +31,4 @@ api_router.include_router(quotes_router)
 api_router.include_router(price_calculations_router)
 api_router.include_router(user_dashboard_router)
 api_router.include_router(public_router)
+api_router.include_router(webhooks_router)
