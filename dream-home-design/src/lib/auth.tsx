@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { fetchMe, type UserProfile } from "./api";
 
+function getStoredToken() {
+  return typeof window !== "undefined" ? localStorage.getItem("token") : null;
+}
+
 type AuthState = {
   user: UserProfile | null;
   token: string | null;
@@ -14,8 +18,8 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(() => getStoredToken());
+  const [loading, setLoading] = useState<boolean>(() => Boolean(getStoredToken()));
 
   const login = useCallback((newToken: string, profile: UserProfile) => {
     localStorage.setItem("token", newToken);
@@ -30,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    const saved = localStorage.getItem("token");
+    const saved = getStoredToken();
     if (!saved) {
       setLoading(false);
       return;

@@ -1,0 +1,57 @@
+# ── GCP-Optimized Backend Dockerfile ──
+# Built for Cloud Run and Cloud Build deployment
+# Includes Cloud SQL Proxy and optimizations for serverless
+
+FROM python:3.13-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# ── Stage 2: GCP Cloud Run Runtime ──
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install runtime dependencies (minimal for Cloud Run)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python dependencies from builder
+COPY --from=builder /root/.local /root/.local
+
+# Set PATH and environment variables for GCP Cloud Run
+ENV PATH=/root/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8080
+
+# Copy application code
+COPY . .
+
+# Create non-root user for security (GCP best practice)
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Health check endpoint for Cloud Run
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Expose port (Cloud Run expects 8080 by default)
+EXPOSE 8080
+
+# Run Uvicorn with Cloud Run optimizations
+# Use workers=1 for Cloud Run's single-core instances
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --timeout-keep-alive 60"]

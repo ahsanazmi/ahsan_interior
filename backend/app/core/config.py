@@ -10,17 +10,13 @@ class Settings(BaseSettings):
     api_prefix: str = "/api"
     allowed_origins: str = "http://localhost:5173"
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/dream_home_design"
-    smtp_host: str | None = None
-    smtp_port: int = 587
-    smtp_username: str | None = Field(
+    resend_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("SMTP_USER", "SMTP_USERNAME"),
+        validation_alias=AliasChoices("RESEND_API_KEY", "RESEND_KEY"),
     )
-    smtp_password: str | None = None
-    smtp_use_tls: bool = True
-    mail_from: str | None = Field(
+    resend_from_email: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("MAIL_FROM", "SENDER_EMAIL"),
+        validation_alias=AliasChoices("RESEND_FROM_EMAIL", "RESEND_FROM"),
     )
     meta_verify_token: str | None = Field(
         default=None,

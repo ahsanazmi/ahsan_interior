@@ -1,4 +1,5 @@
 from collections.abc import Generator
+import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -21,11 +22,14 @@ if _database_url.startswith("postgres://"):
 elif _database_url.startswith("postgresql://") and "+psycopg" not in _database_url:
     _database_url = _database_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
+_pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
+_max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+
 engine = create_engine(
     _database_url,
     pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
+    pool_size=_pool_size,
+    max_overflow=_max_overflow,
     future=True,
 )
 

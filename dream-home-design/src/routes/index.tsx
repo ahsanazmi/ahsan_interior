@@ -13,6 +13,7 @@ import catPooja from "@/assets/cat-pooja.jpg";
 import { Button } from "@/components/ui/button";
 import React, { Suspense } from "react";
 import type { CarouselApi } from "@/components/ui/carousel";
+import { fetchPublicImages, resolveApiUrl, type PublicImage } from "@/lib/api";
 const HeroCarousel = React.lazy(() => import("@/components/site/HeroCarousel"));
 
 export const Route = createFileRoute("/")({
@@ -96,6 +97,8 @@ export const HERO_SLIDES = [
 function HomePage() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<PublicImage[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(true);
 
   useEffect(() => {
     if (!carouselApi) {
@@ -143,6 +146,31 @@ function HomePage() {
 
     return () => window.clearInterval(interval);
   }, [carouselApi, isAutoScrollEnabled]);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchPublicImages({ limit: 6 })
+      .then((images) => {
+        if (active) {
+          setUploadedImages(images);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setUploadedImages([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setImagesLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <>
@@ -362,6 +390,66 @@ function HomePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="container-page pb-24">
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <p className="text-sm uppercase tracking-widest text-primary font-semibold mb-3">
+              Admin uploads
+            </p>
+            <h2 className="font-display text-4xl leading-tight text-plum md:text-6xl">
+              Latest images from the admin panel
+            </h2>
+            <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
+              Any image uploaded in the admin dashboard appears here automatically, so your backend
+              gallery is directly linked to the public frontend.
+            </p>
+          </div>
+          <Button asChild variant="outline" className="hidden rounded-full md:inline-flex">
+            <Link to="/admin">Open admin</Link>
+          </Button>
+        </div>
+
+        {imagesLoading ? (
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-64 rounded-[1.5rem] border border-border/60 bg-muted/50 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : uploadedImages.length > 0 ? (
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {uploadedImages.map((image) => (
+              <article
+                key={image.id}
+                className="group overflow-hidden rounded-[1.5rem] border border-border/70 bg-white/85 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-card"
+              >
+                <div className="overflow-hidden">
+                  <img
+                    src={resolveApiUrl(image.url)}
+                    alt={image.alt_text || image.original_name}
+                    loading="lazy"
+                    className="h-64 w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                </div>
+                <div className="p-4">
+                  <p className="truncate text-sm font-semibold text-plum">{image.original_name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {image.alt_text || "No alt text"}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-10 rounded-[1.5rem] border border-border/70 bg-white/85 p-8 text-center text-muted-foreground shadow-soft">
+            No public images have been uploaded yet. Add one in Admin Images to populate this
+            section.
+          </div>
+        )}
       </section>
 
       {/* LIFETIME WARRANTY */}

@@ -1,0 +1,112 @@
+steps:
+  # Step 1: Build Docker image using Dockerfile.gcp
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.gcp'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:latest'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:${BRANCH_NAME}'
+      - '.'
+    dir: 'backend'
+
+  # Step 2: Push image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:${SHORT_SHA}'
+    waitFor:
+      - 'build-image'
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/run'
+    id: 'deploy-cloud-run'
+    args:
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:${SHORT_SHA}'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--add-cloudsql-instances'
+      - '${_CLOUD_SQL_CONNECTION}'
+      - '--set-env-vars'
+      - 'DATABASE_URL=${_DATABASE_URL},RUN_MIGRATIONS=true,ALLOWED_ORIGINS=${_ALLOWED_ORIGINS},SECRET_KEY=${_SECRET_KEY},EMAIL_PROVIDER=${_EMAIL_PROVIDER},SMTP_HOST=${_SMTP_HOST},SMTP_PORT=${_SMTP_PORT},SMTP_USER=${_SMTP_USER},MAIL_FROM=${_MAIL_FROM}'
+      - '--set-secrets'
+      - 'SMTP_PASSWORD=SMTP_PASSWORD:latest,RESEND_API_KEY=RESEND_API_KEY:latest'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--timeout'
+      - '60'
+      - '--max-instances'
+      - '10'
+      - '--min-instances'
+      - '1'
+      - '--concurrency'
+      - '80'
+      - '--vpc-connector'
+      - 'interior-vpc-connector'
+      - '--execution-environment'
+      - 'gen2'
+    waitFor:
+      - 'push-image'
+
+  # Step 4: Run smoke tests (optional)
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'smoke-test'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} \
+          --region=${_REGION} \
+          --format='value(status.url)')
+        echo "Testing $SERVICE_URL/health"
+        curl -f $SERVICE_URL/api/health || exit 1
+    env:
+      - 'CLOUDSDK_COMPUTE_REGION=${_REGION}'
+    waitFor:
+      - 'deploy-cloud-run'
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/interior-backend/app:${BRANCH_NAME}'
+
+substitutions:
+  _REGION: 'us-central1'
+  _SERVICE_NAME: 'interior-backend'
+  _CLOUD_SQL_CONNECTION: 'your-project:region:interior-db'
+  _DATABASE_URL: 'postgresql://admin:password@/interior_db?host=/cloudsql/your-project:region:interior-db'
+  _ALLOWED_ORIGINS: 'https://your-frontend-url.com'
+  _SECRET_KEY: 'your-generated-secret-key'
+  _EMAIL_PROVIDER: 'smtp'
+  _SMTP_HOST: 'smtp.gmail.com'
+  _SMTP_PORT: '587'
+  _SMTP_USER: 'your-email@gmail.com'
+  _MAIL_FROM: 'noreply@your-company.com'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'N1_HIGHCPU_8'
+
+timeout: '1800s'
+
+onFailure:
+  - name: 'gcr.io/cloud-builders/gke-deploy'
+    args:
+      - run
+      - --filename=k8s/
+      - --location=${_REGION}
+      - --cluster=interior-cluster

@@ -1,13 +1,12 @@
 import json
 import base64
 import html
-import smtplib
 import urllib.error
 import urllib.request
-from email.message import EmailMessage
 from urllib.parse import quote, urlencode
 
 from app.core.config import settings
+from app.services.mailer import send_email as _send_mail
 
 
 def send_marketing_email(
@@ -218,28 +217,8 @@ def _send_twilio_sms(*, phone: str, message: str) -> None:
 
 
 def _send_email(*, to_email: str, subject: str, body: str, html: str | None = None) -> None:
-    sender_email = settings.mail_from or settings.smtp_username
-    if not settings.smtp_host or not sender_email:
+    if not _send_mail(to_email=to_email, subject=subject, body=body, html=html):
         _debug("Email", to_email, f"{subject}\n\n{html or body}")
-        return
-
-    message = EmailMessage()
-    message["From"] = sender_email
-    message["To"] = to_email
-    message["Subject"] = subject
-    message.set_content(body)
-    if html:
-        message.add_alternative(html, subtype="html")
-
-    try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
-            if settings.smtp_use_tls:
-                smtp.starttls()
-            if settings.smtp_username and settings.smtp_password:
-                smtp.login(settings.smtp_username, settings.smtp_password)
-            smtp.send_message(message)
-    except OSError as exc:
-        print(f"[notification] Email send failed: {exc}")
 
 
 def _normalize_phone(phone: str) -> str:

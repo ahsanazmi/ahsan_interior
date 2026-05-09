@@ -16,10 +16,8 @@ def check_env_vars():
     ]
     
     optional_vars = [
-        "SMTP_HOST",
-        "SMTP_USERNAME",
-        "SMTP_PASSWORD",
-        "MAIL_FROM",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
         "TWILIO_ACCOUNT_SID",
         "TWILIO_AUTH_TOKEN",
         "WHATSAPP_ACCESS_TOKEN",
@@ -77,6 +75,7 @@ def check_dependencies():
         "sqlalchemy",
         "pydantic_settings",
         "psycopg",
+        "resend",
     ]
     
     all_good = True

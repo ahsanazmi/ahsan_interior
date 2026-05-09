@@ -8,14 +8,28 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
-        scope: build
+        scope: runtime
+      - key: EMAIL_PROVIDER
+        scope: runtime
       - key: ALLOWED_ORIGINS
         scope: runtime
       - key: SECRET_KEY
         scope: runtime
       - key: SMTP_USER
         scope: runtime
+      - key: SMTP_USERNAME
+        scope: runtime
+      - key: SMTP_HOST
+        scope: runtime
+      - key: SMTP_PORT
+        scope: runtime
       - key: SMTP_PASSWORD
+        scope: runtime
+      - key: MAIL_FROM
+        scope: runtime
+      - key: RESEND_API_KEY
+        scope: runtime
+      - key: RESEND_FROM_EMAIL
         scope: runtime
       - key: VITE_API_BASE_URL
         scope: runtime

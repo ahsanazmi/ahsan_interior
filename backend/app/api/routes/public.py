@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.blog import BlogPost
+from app.models.image import UploadedImage
 from app.models.offer import Offer
 
 router = APIRouter(tags=["public"])
@@ -29,6 +30,17 @@ class PublicOffer(BaseModel):
     original_price: float
     offer_price: float
     unit: str
+
+
+class PublicImage(BaseModel):
+    id: int
+    external_id: str
+    filename: str
+    original_name: str
+    url: str
+    alt_text: str | None
+    category: str
+    uploaded_at: str
 
 
 @router.get("/blogs", response_model=list[PublicBlog])
@@ -63,6 +75,35 @@ def public_offers(db: Session = Depends(get_db)):
         PublicOffer(
             id=r.id, title=r.title, description=r.description, category=r.category,
             original_price=float(r.original_price), offer_price=float(r.offer_price), unit=r.unit,
+        )
+        for r in rows
+    ]
+
+
+@router.get("/images", response_model=list[PublicImage])
+def public_images(
+    category: str | None = Query(default=None),
+    limit: int | None = Query(default=None, ge=1, le=24),
+    db: Session = Depends(get_db),
+):
+    query = db.query(UploadedImage).order_by(UploadedImage.uploaded_at.desc())
+    if category:
+        query = query.filter(UploadedImage.category == category)
+
+    rows = query.all()
+    if limit is not None:
+        rows = rows[:limit]
+
+    return [
+        PublicImage(
+            id=r.id,
+            external_id=r.external_id,
+            filename=r.filename,
+            original_name=r.original_name,
+            url=r.url,
+            alt_text=r.alt_text,
+            category=r.category,
+            uploaded_at=r.uploaded_at.isoformat(),
         )
         for r in rows
     ]

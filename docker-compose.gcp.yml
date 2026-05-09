@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database (simulates Cloud SQL)
+  db:
+    image: postgres:15-alpine
+    container_name: interior-gcp-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres123}
+      POSTGRES_DB: interior_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - gcp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d interior_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - interior-gcp-network
+
+  # Backend API (using GCP Dockerfile)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gcp
+    container_name: interior-gcp-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Database (Cloud SQL equivalent)
+      DATABASE_URL: postgresql://admin:${DB_PASSWORD:-postgres123}@db:5432/interior_db
+      
+      # App settings
+      PORT: 8080
+      RUN_MIGRATIONS: "true"
+      PYTHONUNBUFFERED: 1
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-your-dev-secret-key-change-in-production}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      
+      # Email (SMTP)
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-your-email@gmail.com}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-your-app-password}
+      MAIL_FROM: ${MAIL_FROM:-noreply@your-company.com}
+      
+      # Optional: Resend
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    networks:
+      - interior-gcp-network
+
+  # Frontend (optional, for local testing)
+  frontend:
+    build:
+      context: ./dream-home-design
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080/api
+    container_name: interior-gcp-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080/api
+    depends_on:
+      - backend
+    networks:
+      - interior-gcp-network
+
+volumes:
+  gcp_postgres_data:
+    driver: local
+
+networks:
+  interior-gcp-network:
+    driver: bridge

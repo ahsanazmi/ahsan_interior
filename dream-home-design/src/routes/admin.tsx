@@ -17,6 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   fetchAdminStats, fetchAdminAppointments, fetchAdminLeads,
   fetchAdminBlogs, createAdminBlog, deleteAdminBlog,
   fetchAdminImages, uploadAdminImage, deleteAdminImage,
@@ -1099,6 +1106,7 @@ function BlogsTab({ data, onChange }: { data: BlogItem[]; onChange: (v: BlogItem
 function ImagesTab({ data, onChange }: { data: ImageItem[]; onChange: (v: ImageItem[]) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [altText, setAltText] = useState("");
+  const [category, setCategory] = useState("projects-before");
   const [uploading, setUploading] = useState(false);
 
   async function handleUpload() {
@@ -1106,13 +1114,31 @@ function ImagesTab({ data, onChange }: { data: ImageItem[]; onChange: (v: ImageI
     if (!file) { toast.error("Select an image first"); return; }
     setUploading(true);
     try {
-      const img = await uploadAdminImage(file, altText);
+      const img = await uploadAdminImage(file, altText, category);
       onChange([img, ...data]);
       toast.success("Image uploaded!");
       setAltText("");
+      setCategory("projects-before");
       if (fileRef.current) fileRef.current.value = "";
     } catch { toast.error("Upload failed"); }
     finally { setUploading(false); }
+  }
+
+  function categoryLabel(value: string) {
+    switch (value) {
+      case "projects-before":
+        return "Before";
+      case "projects-after":
+        return "After";
+      case "projects-gallery":
+        return "Gallery";
+      case "homepage":
+        return "Homepage";
+      case "design-ideas":
+        return "Design Ideas";
+      default:
+        return "General";
+    }
   }
 
   async function handleDelete(id: number) {
@@ -1127,6 +1153,22 @@ function ImagesTab({ data, onChange }: { data: ImageItem[]; onChange: (v: ImageI
       <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-white p-5 shadow-soft">
         <div className="flex-1 min-w-[200px]"><Label>Image File</Label><Input ref={fileRef} type="file" accept="image/*" /></div>
         <div className="flex-1 min-w-[200px]"><Label>Alt Text</Label><Input value={altText} onChange={e => setAltText(e.target.value)} placeholder="Describe the image" /></div>
+        <div className="min-w-[180px] flex-1">
+          <Label>Project Image Type</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose image type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="projects-before">Before</SelectItem>
+              <SelectItem value="projects-after">After</SelectItem>
+              <SelectItem value="projects-gallery">Gallery</SelectItem>
+              <SelectItem value="homepage">Homepage</SelectItem>
+              <SelectItem value="design-ideas">Design Ideas</SelectItem>
+              <SelectItem value="general">General</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Button onClick={handleUpload} disabled={uploading} className="gap-1 rounded-full"><Upload className="h-4 w-4" />{uploading ? "Uploading..." : "Upload"}</Button>
       </div>
       {data.length === 0 ? <p className="p-8 text-center text-muted-foreground">No images uploaded yet.</p> : (
@@ -1137,6 +1179,9 @@ function ImagesTab({ data, onChange }: { data: ImageItem[]; onChange: (v: ImageI
               <div className="p-3">
                 <p className="truncate text-xs font-medium text-plum">{img.original_name}</p>
                 <p className="truncate text-[10px] text-muted-foreground">{img.alt_text || "No alt text"}</p>
+                <p className="mt-1 inline-flex rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground/75">
+                  {categoryLabel(img.category)}
+                </p>
               </div>
               <button type="button" onClick={() => handleDelete(img.id)}
                 className="absolute right-2 top-2 rounded-full bg-red-500/80 p-1.5 text-white opacity-0 transition group-hover:opacity-100">

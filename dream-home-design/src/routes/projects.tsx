@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Filter, Images, Star } from "lucide-react";
 import heroLiving from "@/assets/hero-living.jpg";
 import heroKitchen from "@/assets/hero-kitchen.jpg";
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { fetchPublicImages, resolveApiUrl, type PublicImage } from "@/lib/api";
 
 export const Route = createFileRoute("/projects")({
   component: Projects,
@@ -167,6 +168,47 @@ function Projects() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("Noida");
+  const [beforeImages, setBeforeImages] = useState<PublicImage[]>([]);
+  const [afterImages, setAfterImages] = useState<PublicImage[]>([]);
+  const [projectImagesLoading, setProjectImagesLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      fetchPublicImages({ category: "projects-before", limit: 6 }),
+      fetchPublicImages({ category: "projects-after", limit: 6 }),
+    ])
+      .then(([before, after]) => {
+        if (active) {
+          setBeforeImages(before);
+          setAfterImages(after);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setBeforeImages([]);
+          setAfterImages([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setProjectImagesLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const beforeAfterPairs = Array.from(
+    { length: Math.max(beforeImages.length, afterImages.length) },
+    (_, index) => ({
+      before: beforeImages[index],
+      after: afterImages[index],
+    }),
+  );
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -252,6 +294,86 @@ function Projects() {
             <ProjectCard key={`grid-${card.title}`} card={card} />
           ))}
         </div>
+      </section>
+
+      <section className="container-page pb-14">
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <p className="text-sm uppercase tracking-widest text-primary font-semibold mb-3">
+              Admin image sync
+            </p>
+            <h2 className="font-display text-4xl text-plum md:text-5xl">
+              Before and after images from admin
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm text-muted-foreground md:text-base">
+              Upload your room shots as <span className="font-semibold text-foreground">Before</span> and <span className="font-semibold text-foreground">After</span> in the admin image section, and they will show here as pairs.
+            </p>
+          </div>
+          <Button asChild variant="outline" className="hidden rounded-full md:inline-flex">
+            <Link to="/admin">Upload before/after images</Link>
+          </Button>
+        </div>
+
+        {projectImagesLoading ? (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="h-56 rounded-[1.5rem] border border-border/60 bg-muted/50 animate-pulse" />
+            ))}
+          </div>
+        ) : beforeAfterPairs.some((pair) => pair.before || pair.after) ? (
+          <div className="mt-8 grid gap-5 lg:grid-cols-2">
+            {beforeAfterPairs.map((pair, index) => (
+              <article key={index} className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-white/85 shadow-soft">
+                <div className="grid grid-cols-1 sm:grid-cols-2">
+                  <div className="border-b border-border/60 sm:border-b-0 sm:border-r">
+                    <div className="border-b border-border/60 bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Before
+                    </div>
+                    {pair.before ? (
+                      <img
+                        src={resolveApiUrl(pair.before.url)}
+                        alt={pair.before.alt_text || pair.before.original_name}
+                        className="h-64 w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-64 items-center justify-center bg-muted/40 text-sm text-muted-foreground">
+                        No before image
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="border-b border-border/60 bg-primary/5 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-primary">
+                      After
+                    </div>
+                    {pair.after ? (
+                      <img
+                        src={resolveApiUrl(pair.after.url)}
+                        alt={pair.after.alt_text || pair.after.original_name}
+                        className="h-64 w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-64 items-center justify-center bg-muted/40 text-sm text-muted-foreground">
+                        No after image
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-semibold text-plum">Transformation {index + 1}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Pair the upload order in admin to show matching before and after images together.
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8 rounded-[1.5rem] border border-border/70 bg-white/85 p-8 text-center text-muted-foreground shadow-soft">
+            No before/after project images uploaded yet. Use the admin image section and choose Before or After.
+          </div>
+        )}
       </section>
 
       <section className="container-page py-10">

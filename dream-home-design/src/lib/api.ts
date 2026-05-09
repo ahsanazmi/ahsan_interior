@@ -1,10 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://ahsan-interior.onrender.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Debug: Log API base URL to console
-if (!import.meta.env.VITE_API_BASE_URL) {
-  console.warn("⚠️ VITE_API_BASE_URL not set, using fallback:", API_BASE_URL);
-} else {
-  console.log("✅ API Base URL:", API_BASE_URL);
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not set");
 }
 
 export type CityDetails = {
@@ -738,4 +735,27 @@ export type PublicOffer = {
 
 export function fetchPublicOffers() {
   return requestJson<PublicOffer[]>("/offers");
+}
+
+export type PublicImage = {
+  id: number;
+  external_id: string;
+  filename: string;
+  original_name: string;
+  url: string;
+  alt_text: string | null;
+  category: string;
+  uploaded_at: string;
+};
+
+export function fetchPublicImages(params?: { category?: string; limit?: number }) {
+  const searchParams = new URLSearchParams();
+  if (params?.category) searchParams.set("category", params.category);
+  if (typeof params?.limit === "number") searchParams.set("limit", String(params.limit));
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  return requestJson<PublicImage[]>(`/images${query}`);
+}
+
+export function resolveApiUrl(path: string) {
+  return path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
 }

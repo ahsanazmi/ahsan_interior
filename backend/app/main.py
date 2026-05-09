@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import asyncio
+import logging
 from pathlib import Path
 import os
 
@@ -9,6 +11,8 @@ from app.api.routes import api_router
 from app.core.config import settings
 from app.core.cors import add_cors_middleware
 from app.db import init_db
+
+logger = logging.getLogger(__name__)
 
 # Determine writable uploads directory. Prefer `UPLOAD_DIR` env var, then project `uploads`.
 default_upload = Path(__file__).resolve().parent.parent / "uploads"
@@ -27,7 +31,24 @@ except Exception:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    """Lifespan handler.
+
+    To avoid blocking startup on long-running DB migrations in constrained
+    environments (e.g. Render free instances), run `init_db()` in a
+    background thread unless explicitly disabled via `RUN_MIGRATIONS=false`.
+    """
+    run_migrations = os.getenv("RUN_MIGRATIONS", "true").lower() in ("1", "true", "yes")
+    if run_migrations:
+        try:
+            logger.info("Scheduling database initialization in background thread")
+            asyncio.create_task(asyncio.to_thread(init_db))
+        except Exception:
+            # Fallback to synchronous init if background scheduling fails
+            logger.exception("Background DB init failed; running synchronously")
+            init_db()
+    else:
+        logger.info("Skipping database initialization (RUN_MIGRATIONS=false)")
+
     yield
 
 
