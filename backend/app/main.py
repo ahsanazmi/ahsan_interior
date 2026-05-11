@@ -66,6 +66,8 @@ app.include_router(api_router, prefix=settings.api_prefix)
 
 # Serve uploaded images at /uploads/<filename>
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+# Compatibility alias for deployments/frontends that request /api/uploads/<filename>
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="api-uploads")
 
 
 @app.get("/")

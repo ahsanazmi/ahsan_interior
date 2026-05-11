@@ -21,6 +21,8 @@ export type LeadPayload = {
   email: string;
   phone: string;
   city: string;
+  query_type?: string;
+  message?: string | null;
   whatsapp_updates: boolean;
   source?: string;
 };
@@ -472,6 +474,8 @@ export type LeadItem = {
   email: string;
   phone: string;
   city: string;
+  query_type: string;
+  message: string | null;
   whatsapp_updates: boolean;
   source: string;
   created_at: string;
@@ -757,5 +761,14 @@ export function fetchPublicImages(params?: { category?: string; limit?: number }
 }
 
 export function resolveApiUrl(path: string) {
-  return path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
+  if (path.startsWith("http")) {
+    return path;
+  }
+
+  if (path.startsWith("/uploads/")) {
+    const backendOrigin = API_BASE_URL.replace(/\/api\/?$/, "");
+    return `${backendOrigin}${path}`;
+  }
+
+  return `${API_BASE_URL}${path}`;
 }

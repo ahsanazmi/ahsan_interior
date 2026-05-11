@@ -21,6 +21,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CitiesRouteImport } from './routes/cities'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as ContactUsRouteImport } from './routes/contact-us'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MagazineIndexRouteImport } from './routes/magazine/index'
 import { Route as DesignIdeasIndexRouteImport } from './routes/design-ideas/index'
@@ -130,6 +131,11 @@ const AdminRoute = AdminRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactUsRoute = ContactUsRouteImport.update({
+  id: '/contact-us',
+  path: '/contact-us',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -414,6 +420,7 @@ const MagazineBlogSlugRoute = MagazineBlogSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/contact-us': typeof ContactUsRoute
   '/admin': typeof AdminRoute
   '/cities': typeof CitiesRouteWithChildren
   '/dashboard': typeof DashboardRoute
@@ -606,6 +613,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/contact-us'
     | '/admin'
     | '/cities'
     | '/dashboard'
@@ -670,6 +678,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/contact-us'
     | '/admin'
     | '/dashboard'
     | '/hire-a-designer'
@@ -731,6 +740,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/contact-us'
     | '/admin'
     | '/cities'
     | '/dashboard'
@@ -886,6 +896,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact-us': {
+      id: '/contact-us'
+      path: '/contact-us'
+      fullPath: '/contact-us'
+      preLoaderRoute: typeof ContactUsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -1379,6 +1396,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
+  ContactUsRoute: ContactUsRoute,
   CitiesRoute: CitiesRouteWithChildren,
   DashboardRoute: DashboardRoute,
   DesignIdeasRoute: DesignIdeasRouteWithChildren,

@@ -73,24 +73,28 @@ export const HERO_SLIDES = [
     alt: "Modern living room with deep blue feature wall",
     label: "Living room",
     title: "Homes that feel calm, elegant, and effortless.",
+    objectPosition: "center 42%",
   },
   {
     image: heroKitchen,
     alt: "Contemporary modular kitchen with marble island",
     label: "Kitchen",
     title: "Kitchen spaces planned like a premium product.",
+    objectPosition: "center center",
   },
   {
     image: heroBedroom,
     alt: "Warm bedroom with soft lighting and layered textures",
     label: "Bedroom",
     title: "Comfort-first spaces with a cleaner visual language.",
+    objectPosition: "center 38%",
   },
   {
     image: catOffice,
     alt: "Compact home office with shelving and plants",
     label: "Home office",
     title: "Designed for modern routines and smaller footprints.",
+    objectPosition: "center 35%",
   },
 ] as const;
 

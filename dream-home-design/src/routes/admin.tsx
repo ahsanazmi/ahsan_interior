@@ -476,6 +476,8 @@ function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number)
       email: l.email,
       phone: l.phone,
       city: l.city,
+      query_type: l.query_type,
+      message: l.message ?? "",
       whatsapp_updates: l.whatsapp_updates,
       source: l.source,
     });
@@ -506,9 +508,9 @@ function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number)
           <div className="border-b border-border bg-muted/20 px-5 py-3 text-sm text-muted-foreground">
             Showing all captured leads, including Meta Lead Ads submissions.
           </div>
-          <table className="w-full min-w-[850px] text-left text-sm">
+          <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40">
-              <tr>{["Name","Email","Phone","City","WhatsApp","Source","Date","Actions"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
+              <tr>{["Name","Email","Phone","City","Query Type","Message","WhatsApp","Source","Date","Actions"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
             </thead>
             <tbody>
               {data.map(l => (
@@ -517,6 +519,10 @@ function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number)
                   <td className="px-5 py-3 text-muted-foreground">{l.email}</td>
                   <td className="px-5 py-3 text-muted-foreground">{l.phone}</td>
                   <td className="px-5 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{l.city}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{l.query_type}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">
+                    <div className="max-w-[320px] whitespace-pre-wrap break-words">{l.message || "—"}</div>
+                  </td>
                   <td className="px-5 py-3">{l.whatsapp_updates ? "✅" : "—"}</td>
                   <td className="px-5 py-3"><span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase text-amber-700">{formatLeadSource(l.source)}</span></td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(l.created_at).toLocaleDateString()}</td>
@@ -554,6 +560,14 @@ function EditLeadForm({ lead, onSave, onCancel, onChange, data }: any) {
         <div>
           <Label>City</Label>
           <Input value={data.city} onChange={(e) => onChange({ ...data, city: e.target.value })} />
+        </div>
+        <div>
+          <Label>Query Type</Label>
+          <Input value={data.query_type || ""} onChange={(e) => onChange({ ...data, query_type: e.target.value })} />
+        </div>
+        <div className="md:col-span-2">
+          <Label>Message</Label>
+          <Input value={data.message || ""} onChange={(e) => onChange({ ...data, message: e.target.value })} />
         </div>
         <div>
           <Label>Source</Label>

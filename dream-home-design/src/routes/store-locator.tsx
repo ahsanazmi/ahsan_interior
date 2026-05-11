@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MapPin, Phone, Clock } from "lucide-react";
+import { Clock, MapPin, Phone } from "lucide-react";
 
 export const Route = createFileRoute("/store-locator")({
   component: StoreLocator,
@@ -11,14 +11,18 @@ export const Route = createFileRoute("/store-locator")({
   }),
 });
 
-const STORES = [
-  { city: "Noida", area: "Sector 62", phone: "+91 9557930504", hours: "10 AM – 8 PM" },
-  { city: "Greater Noida", area: "Knowledge Park", phone: "+91 9997700405", hours: "10 AM – 8 PM" },
-  { city: "Agra", area: "Sikandra", phone: "+91 9557930504", hours: "10 AM – 8 PM" },
-  { city: "Rajasthan, Jaipur", area: "Malviya Nagar", phone: "+91 9997700405", hours: "10 AM – 8 PM" },
-  { city: "Goa", area: "Panaji", phone: "+91 9557930504", hours: "10 AM – 8 PM" },
-  { city: "Dehradun", area: "Rajpur Road", phone: "+91 9997700405", hours: "10 AM – 8 PM" },
-];
+const STORE = {
+  city: "Greater Noida",
+  area: "ATS Happy Trails GH02A, Grow+ Market Shop No. 108",
+  address:
+    "ATS Happy Trails GH02A grow+ market shop no 108 west vaidpura greater noida Uttar Pradesh 203207",
+  coordinates: "28.5674550, 77.4767960",
+  phone: "+91 9557930504",
+  email: "nextlivingspacespvtitd@gmail.com",
+  hours: "Monday to Saturday · 10 AM – 8 PM",
+};
+
+const mapSrc = "https://www.google.com/maps?q=28.5674550,77.4767960&z=17&output=embed";
 
 function StoreLocator() {
   return (
@@ -29,38 +33,70 @@ function StoreLocator() {
             Store Locator
           </p>
           <h1 className="mt-3 max-w-3xl font-display text-4xl text-plum md:text-6xl">
-            Visit a NextGen Living Space experience centre
+            Visit our single experience centre in Greater Noida
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-            See materials, finishes and full-room setups in person.
+            Find our one verified location, open it in Google Maps, and visit us for materials,
+            finishes and in-person design guidance.
           </p>
         </div>
       </section>
 
       <section className="container-page py-16 md:py-20">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {STORES.map((s) => (
-            <div
-              key={s.area}
-              className="rounded-[1.5rem] border border-border/70 bg-white/85 p-6 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-card"
-            >
-              <div className="text-xs uppercase tracking-widest text-primary font-semibold">
-                {s.city}
-              </div>
-              <h2 className="mt-1 font-display text-2xl text-plum">{s.area}</h2>
-              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" /> {s.area}, {s.city}
-                </li>
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-primary" /> {s.phone}
-                </li>
-                <li className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" /> {s.hours}
-                </li>
-              </ul>
+        <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch">
+          <div className="rounded-[2rem] border border-border/70 bg-white/90 p-6 shadow-soft md:p-8">
+            <div className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+              Greater Noida
             </div>
-          ))}
+            <h2 className="mt-3 font-display text-3xl text-plum md:text-4xl">{STORE.area}</h2>
+            <ul className="mt-6 space-y-4 text-sm text-muted-foreground">
+              <li className="flex items-start gap-3">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>{STORE.address}</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-primary" />
+                <a href={`tel:${STORE.phone.replace(/\s+/g, "")}`} className="font-medium text-plum hover:text-primary">
+                  {STORE.phone}
+                </a>
+              </li>
+              <li className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-primary" />
+                <span>{STORE.hours}</span>
+              </li>
+            </ul>
+
+            <div className="mt-6 rounded-2xl bg-muted/45 px-4 py-3 text-sm text-muted-foreground">
+              Coordinates: <span className="font-medium text-plum">{STORE.coordinates}</span>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=28.5674550,77.4767960"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Open in Google Maps
+              </a>
+              <a
+                href={`mailto:${STORE.email}`}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-input bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Email us
+              </a>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[2rem] border border-border/70 bg-white shadow-soft">
+            <iframe
+              title="NextGen Living Space store location"
+              src={mapSrc}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="h-[520px] w-full"
+            />
+          </div>
         </div>
       </section>
     </>

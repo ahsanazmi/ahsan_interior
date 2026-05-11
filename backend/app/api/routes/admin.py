@@ -288,6 +288,8 @@ def list_leads(
             "email": r.email,
             "phone": r.phone,
             "city": r.city,
+            "query_type": r.query_type,
+            "message": r.message,
             "whatsapp_updates": r.whatsapp_updates,
             "source": r.source,
             "created_at": r.created_at.isoformat(),
@@ -512,6 +514,10 @@ def update_lead(
         lead.phone = payload["phone"]
     if "city" in payload:
         lead.city = payload["city"]
+    if "query_type" in payload:
+        lead.query_type = payload["query_type"]
+    if "message" in payload:
+        lead.message = payload["message"]
     if "whatsapp_updates" in payload:
         lead.whatsapp_updates = payload["whatsapp_updates"]
     if "source" in payload:
@@ -527,6 +533,8 @@ def update_lead(
         "email": lead.email,
         "phone": lead.phone,
         "city": lead.city,
+        "query_type": lead.query_type,
+        "message": lead.message,
         "whatsapp_updates": lead.whatsapp_updates,
         "source": lead.source,
         "created_at": lead.created_at.isoformat(),

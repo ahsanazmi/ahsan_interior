@@ -8,8 +8,10 @@ class LeadCreate(BaseModel):
     email: EmailStr
     phone: str = Field(min_length=7, max_length=20)
     city: str = Field(min_length=2, max_length=120)
+    query_type: str = Field(default="General query", max_length=120)
+    message: str | None = Field(default=None, max_length=2000)
     whatsapp_updates: bool = True
-    source: str = Field(default="city-page", max_length=120)
+    source: str = Field(default="contact-us", max_length=120)
 
 
 class LeadResponse(BaseModel):

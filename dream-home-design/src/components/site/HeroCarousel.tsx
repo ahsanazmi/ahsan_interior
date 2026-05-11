@@ -24,7 +24,8 @@ export default function HeroCarousel({ setApi }: { setApi?: (api: CarouselApi) =
                 loading={idx === 0 ? "eager" : "lazy"}
                 fetchPriority={idx === 0 ? "high" : "auto"}
                 decoding="async"
-                className="h-full w-full object-cover object-[center_35%] md:object-center"
+                className="h-full w-full object-cover"
+                style={{ objectPosition: slide.objectPosition ?? "center 35%" }}
               />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_28%),linear-gradient(135deg,rgba(10,15,35,0.2),rgba(10,15,35,0.84))]" />
             </div>

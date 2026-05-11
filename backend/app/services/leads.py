@@ -2,11 +2,22 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from app.schemas.lead import LeadCreate, LeadResponse
 from app.models.lead import Lead
+from app.schemas.lead import LeadCreate, LeadResponse
 
 
-def _persist_lead(*, name: str, email: str, phone: str, city: str, whatsapp_updates: bool, source: str, db: Session) -> LeadResponse:
+def _persist_lead(
+    *,
+    name: str,
+    email: str,
+    phone: str,
+    city: str,
+    query_type: str,
+    message: str | None,
+    whatsapp_updates: bool,
+    source: str,
+    db: Session,
+) -> LeadResponse:
     lead_id = str(uuid4())
     lead = Lead(
         external_id=lead_id,
@@ -14,6 +25,8 @@ def _persist_lead(*, name: str, email: str, phone: str, city: str, whatsapp_upda
         email=email,
         phone=phone,
         city=city,
+        query_type=query_type,
+        message=message,
         whatsapp_updates=whatsapp_updates,
         source=source,
     )
@@ -29,6 +42,8 @@ def create_lead(payload: LeadCreate, db: Session) -> LeadResponse:
         email=payload.email,
         phone=payload.phone,
         city=payload.city,
+        query_type=payload.query_type,
+        message=payload.message,
         whatsapp_updates=payload.whatsapp_updates,
         source=payload.source,
         db=db,
@@ -41,6 +56,8 @@ def create_meta_lead(
     email: str,
     phone: str,
     city: str,
+    query_type: str = "General query",
+    message: str | None = None,
     whatsapp_updates: bool = False,
     source: str = "meta-lead-ads",
     db: Session,
@@ -50,6 +67,8 @@ def create_meta_lead(
         email=email,
         phone=phone,
         city=city,
+        query_type=query_type,
+        message=message,
         whatsapp_updates=whatsapp_updates,
         source=source,
         db=db,
