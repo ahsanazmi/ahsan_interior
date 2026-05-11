@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  resendAppointmentAccountOtp,
   submitAppointment,
   verifyAppointmentAccount,
   type AppointmentResponse,
@@ -73,21 +72,22 @@ const journeySteps = [
 ];
 
 const cityOptions = [
+  "Agra",
+  "Mumbai",
+  "Hyderabad",
   "Noida",
   "Greater Noida",
   "Jewar",
-  "Rajasthan, Jaipur",
+  "Jaipur",
   "Mathura",
-  "Agra",
   "Goa",
   "Moradabad",
   "Chandigarh",
   "Dehradun",
   "Rampur",
-  "Bareilly",
+  "Bariley",
   "Aligarh",
   "Vrindavan",
-  "Other",
 ];
 
 function HireDesigner() {
@@ -106,7 +106,6 @@ function HireDesigner() {
     appointment: AppointmentResponse;
     email: string;
   } | null>(null);
-  const [otp, setOtp] = useState("");
   const [accountPassword, setAccountPassword] = useState("");
   const [accountLoading, setAccountLoading] = useState(false);
 
@@ -176,8 +175,8 @@ function HireDesigner() {
   async function onAccountSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!pendingAccount) return;
-    if (!/^[0-9]{4,8}$/.test(otp.trim())) {
-      toast.error("Please enter the OTP sent to you.");
+    if (accountPassword.length < 6) {
+      toast.error("Password must be at least 6 characters.");
       return;
     }
 
@@ -186,32 +185,14 @@ function HireDesigner() {
       const response = await verifyAppointmentAccount({
         appointment_id: pendingAccount.appointment.external_id,
         email: pendingAccount.email,
-        otp: otp.trim(),
         password: accountPassword,
       });
       login(response.access_token, response.user);
       toast.success("Account created and signed in.");
       setPendingAccount(null);
-      setOtp("");
       setAccountPassword("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to verify OTP.");
-    } finally {
-      setAccountLoading(false);
-    }
-  }
-
-  async function onResendOtp() {
-    if (!pendingAccount) return;
-    setAccountLoading(true);
-    try {
-      const response = await resendAppointmentAccountOtp({
-        appointment_id: pendingAccount.appointment.external_id,
-        email: pendingAccount.email,
-      });
-      toast.success(response.message);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to resend OTP.");
+      toast.error(error instanceof Error ? error.message : "Unable to create account.");
     } finally {
       setAccountLoading(false);
     }
@@ -395,20 +376,8 @@ function HireDesigner() {
                   <div>
                     <h3 className="font-semibold text-plum">Create your account</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Enter the OTP sent to your mobile number and set a password.
+                      Set your password to create account and continue.
                     </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="appointment-otp" className="text-plum">
-                      OTP
-                    </Label>
-                    <Input
-                      id="appointment-otp"
-                      inputMode="numeric"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      required
-                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="appointment-password" className="text-plum">
@@ -424,17 +393,9 @@ function HireDesigner() {
                     />
                   </div>
                   <Button type="submit" className="h-11 w-full rounded-full" disabled={accountLoading}>
-                    {accountLoading ? "Verifying..." : "Verify OTP & Create Account"}
+                    {accountLoading ? "Creating account..." : "Create Account"}
                   </Button>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <button
-                      type="button"
-                      className="font-semibold text-primary hover:underline"
-                      onClick={onResendOtp}
-                      disabled={accountLoading}
-                    >
-                      Resend OTP
-                    </button>
                     {pendingAccount.appointment.whatsapp_contact_url ? (
                       <a
                         href={pendingAccount.appointment.whatsapp_contact_url}
@@ -880,18 +841,8 @@ function HireDesigner() {
                   <div>
                     <h3 className="font-semibold">Create your account</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Enter the OTP sent to your mobile number and set a password.
+                      Set your password to create account and continue.
                     </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="appointment-otp-bottom">OTP</Label>
-                    <Input
-                      id="appointment-otp-bottom"
-                      inputMode="numeric"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      required
-                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="appointment-password-bottom">Password</Label>
@@ -905,17 +856,9 @@ function HireDesigner() {
                     />
                   </div>
                   <Button type="submit" className="h-11 w-full rounded-full" disabled={accountLoading}>
-                    {accountLoading ? "Verifying..." : "Verify OTP & Create Account"}
+                    {accountLoading ? "Creating account..." : "Create Account"}
                   </Button>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <button
-                      type="button"
-                      className="font-semibold text-primary hover:underline"
-                      onClick={onResendOtp}
-                      disabled={accountLoading}
-                    >
-                      Resend OTP
-                    </button>
                     {pendingAccount.appointment.whatsapp_contact_url ? (
                       <a
                         href={pendingAccount.appointment.whatsapp_contact_url}

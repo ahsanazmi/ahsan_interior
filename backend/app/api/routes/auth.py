@@ -2,12 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
-from datetime import datetime, timedelta, timezone
-import random
 
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db import get_db
-from app.models.account_otp import AccountOtp
 from app.models.appointment import Appointment
 from app.models.user import User
 from app.schemas.user import (
@@ -19,7 +16,6 @@ from app.schemas.user import (
     UserRegister,
 )
 from app.services.notifications import (
-    send_account_otp,
     send_login_promotion_email,
     send_login_promotion_whatsapp,
 )
@@ -86,25 +82,26 @@ def verify_appointment_account(
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    otp = _latest_otp(payload.appointment_id, payload.email, db)
-    if otp is None:
-        raise HTTPException(status_code=400, detail="OTP not found. Please book an appointment again.")
-    if otp.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=400, detail="OTP expired. Please resend OTP.")
-    if not verify_password(payload.otp, otp.otp_hash):
-        raise HTTPException(status_code=400, detail="Invalid OTP")
+    appointment = (
+        db.query(Appointment)
+        .filter(
+            Appointment.external_id == payload.appointment_id,
+            Appointment.email == payload.email,
+        )
+        .first()
+    )
+    if appointment is None:
+        raise HTTPException(status_code=404, detail="Appointment not found")
 
     user = User(
-        name=otp.name,
-        email=otp.email,
-        phone=otp.phone,
+        name=appointment.name,
+        email=appointment.email,
+        phone=appointment.phone,
         password_hash=hash_password(payload.password),
         role="user",
-        city=otp.city,
+        city=appointment.city,
     )
-    otp.used = True
     db.add(user)
-    db.add(otp)
     db.commit()
     db.refresh(user)
 
@@ -117,40 +114,9 @@ def resend_appointment_account_otp(
     payload: AppointmentOtpResend,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    appointment = (
-        db.query(Appointment)
-        .filter(Appointment.external_id == payload.appointment_id, Appointment.email == payload.email)
-        .first()
-    )
-    if appointment is None:
-        raise HTTPException(status_code=404, detail="Appointment not found")
-    if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    db.query(AccountOtp).filter(
-        AccountOtp.appointment_external_id == appointment.external_id,
-        AccountOtp.email == appointment.email,
-        AccountOtp.used.is_(False),
-    ).update({"used": True})
-
-    otp = f"{random.SystemRandom().randint(100000, 999999)}"
-    row = AccountOtp(
-        appointment_external_id=appointment.external_id,
-        name=appointment.name,
-        email=appointment.email,
-        phone=appointment.phone,
-        city=appointment.city,
-        otp_hash=hash_password(otp),
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
-    )
-    db.add(row)
-    db.commit()
-    send_account_otp(
-        phone=appointment.phone,
-        name=appointment.name,
-        otp=otp,
-    )
-    return {"message": "OTP resent to your mobile number by SMS."}
+    _ = payload
+    _ = db
+    raise HTTPException(status_code=410, detail="OTP flow is disabled. Please create account with password.")
 
 
 @router.get("/me", response_model=UserProfile)
@@ -158,14 +124,3 @@ def get_me(user: User = Depends(get_current_user)) -> UserProfile:
     return _profile(user)
 
 
-def _latest_otp(appointment_id: str, email: str, db: Session) -> AccountOtp | None:
-    return (
-        db.query(AccountOtp)
-        .filter(
-            AccountOtp.appointment_external_id == appointment_id,
-            AccountOtp.email == email,
-            AccountOtp.used.is_(False),
-        )
-        .order_by(AccountOtp.created_at.desc())
-        .first()
-    )

@@ -20,7 +20,7 @@ class UserLogin(BaseModel):
 class AppointmentAccountVerify(BaseModel):
     appointment_id: str = Field(min_length=10, max_length=36)
     email: EmailStr
-    otp: str = Field(min_length=4, max_length=8)
+    otp: str | None = Field(default=None, min_length=4, max_length=8)
     password: str = Field(min_length=6, max_length=128)
 
 

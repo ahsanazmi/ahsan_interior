@@ -189,7 +189,7 @@ export type LoginPayload = { email: string; password: string };
 export type AppointmentAccountPayload = {
   appointment_id: string;
   email: string;
-  otp: string;
+  otp?: string;
   password: string;
 };
 

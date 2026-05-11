@@ -137,7 +137,7 @@ function CityInteriorsPage() {
   const displayExperienceCenter = cityDetails?.experience_center ?? `NextGen Experience Center, ${city}`;
   const displayAddress = cityDetails?.address ?? `NextGen Living Space - Modular Kitchens & Wardrobes, 1st floor, Sanjay Palace, Civil Lines, ${city}, Uttar Pradesh 282002`;
   const displayTimings = cityDetails?.timings ?? "Monday to Saturday | 10 AM - 8 PM";
-  const displayPhone = cityDetails?.phone ?? "+91 8047759147";
+  const displayPhone = cityDetails?.phone ?? "+91 9557930504, +91 9997700405";
   const displayAppointmentTypes = cityDetails?.appointment_types ?? ["Experience Centre Tour - 30 minutes", "Design consultation - 60 minutes"];
 
   return (
