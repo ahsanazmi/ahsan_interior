@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import api_router
 from app.core.config import settings
 from app.core.cors import add_cors_middleware
-from app.db import init_db
+from app.db import ensure_compatibility_schema, init_db
 
 logger = logging.getLogger(__name__)
 
@@ -33,19 +33,23 @@ except Exception:
 async def lifespan(app: FastAPI):
     """Lifespan handler.
 
-    To avoid blocking startup on long-running DB migrations in constrained
-    environments (e.g. Render free instances), run `init_db()` in a
-    background thread unless explicitly disabled via `RUN_MIGRATIONS=false`.
+    Ensures critical schema compatibility runs synchronously before app starts,
+    then schedules full DB init in background to avoid blocking startup.
     """
     run_migrations = os.getenv("RUN_MIGRATIONS", "true").lower() in ("1", "true", "yes")
     if run_migrations:
         try:
-            logger.info("Scheduling database initialization in background thread")
+            # CRITICAL: Run schema compatibility synchronously before accepting requests
+            logger.info("Running schema compatibility check (synchronous)...")
+            ensure_compatibility_schema()
+            logger.info("✓ Schema compatibility check completed")
+            
+            # Schedule full DB init in background to avoid blocking startup
+            logger.info("Scheduling full database initialization in background")
             asyncio.create_task(asyncio.to_thread(init_db))
         except Exception:
-            # Fallback to synchronous init if background scheduling fails
-            logger.exception("Background DB init failed; running synchronously")
-            init_db()
+            logger.exception("Critical: Schema compatibility check failed!")
+            raise  # Prevent app from starting if schema migration fails
     else:
         logger.info("Skipping database initialization (RUN_MIGRATIONS=false)")
 

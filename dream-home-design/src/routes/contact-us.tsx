@@ -131,7 +131,10 @@ function ContactUsPage() {
       setMessage("");
       setWhatsappUpdates(true);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unable to submit the form.";
+      const errorMessage =
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : "Failed to fetch — please connect with backend";
       setStatusType("error");
       setStatusMessage(errorMessage);
       toast.error(errorMessage);
