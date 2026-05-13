@@ -12,6 +12,7 @@ const NAV = [
   { label: "Magazine", to: "/magazine" },
   { label: "Cities", to: "/cities" },
   { label: "Projects", to: "/projects" },
+  { label: "Reviews", to: "/reviews" },
   { label: "Store Locator", to: "/store-locator" },
 ] as const;
 
@@ -47,12 +48,24 @@ const OFFERING_COLUMNS = {
     { label: "Wardrobe Price Calculator", to: "/price-calculator" },
     { label: "Wardrobe Components", to: "/design-ideas" },
   ],
+  villa: [
+    { label: "Know Your Villa Design", to: "/design-ideas" },
+    { label: "Villa Design Price Calculator", to: "/price-calculator" },
+    { label: "Villa Design Components", to: "/design-ideas" },
+  ],
+  office: [
+    { label: "Know Your Office Design", to: "/design-ideas" },
+    { label: "Office Design Price Calculator", to: "/price-calculator" },
+    { label: "Office Design Components", to: "/design-ideas" },
+  ],
 } as const;
 
 const PRICE_CALCULATORS = [
   { label: "Home Interior Price Calculator", to: "/price-calculator" },
   { label: "Kitchen Price Calculator", to: "/price-calculator" },
   { label: "Wardrobe Price Calculator", to: "/price-calculator" },
+  { label: "Villa Design Price Calculator", to: "/price-calculator" },
+  { label: "Office Design Price Calculator", to: "/price-calculator" },
 ] as const;
 
 const DESIGN_IDEA_COLUMNS = [
@@ -514,7 +527,7 @@ export function Header() {
                   role="menu"
                   aria-label="Offerings menu"
                 >
-                  <div className="grid grid-cols-[310px_1fr_1fr] gap-12">
+                  <div className="grid grid-cols-[310px_1fr_1fr_1fr_1fr] gap-12">
                     <div>
                       <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Explore offerings
@@ -574,6 +587,46 @@ export function Header() {
                       </p>
                       <div className="space-y-2">
                         {OFFERING_COLUMNS.wardrobe.map((item) => (
+                          <Link
+                            key={item.label}
+                            to={item.to}
+                            className="flex items-center justify-between border-b border-border/80 py-2.5 text-base leading-tight text-foreground/85 transition hover:text-primary"
+                            onClick={() => setOfferingsOpen(false)}
+                            role="menuitem"
+                          >
+                            <span>{item.label}</span>
+                            {item.label.includes("Components") && <Plus className="h-4 w-4" />}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Villa Design
+                      </p>
+                      <div className="space-y-2">
+                        {OFFERING_COLUMNS.villa.map((item) => (
+                          <Link
+                            key={item.label}
+                            to={item.to}
+                            className="flex items-center justify-between border-b border-border/80 py-2.5 text-base leading-tight text-foreground/85 transition hover:text-primary"
+                            onClick={() => setOfferingsOpen(false)}
+                            role="menuitem"
+                          >
+                            <span>{item.label}</span>
+                            {item.label.includes("Components") && <Plus className="h-4 w-4" />}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Office Design
+                      </p>
+                      <div className="space-y-2">
+                        {OFFERING_COLUMNS.office.map((item) => (
                           <Link
                             key={item.label}
                             to={item.to}

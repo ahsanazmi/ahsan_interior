@@ -12,18 +12,20 @@ from app.models.user import User
 router = APIRouter(tags=["calculator-settings"])
 
 DEFAULT_BHK_MULTIPLIERS = {
-    "1 BHK": 1,
-    "2 BHK": 1.35,
-    "3 BHK": 1.75,
-    "4 BHK": 2.25,
-    "5 BHK+": 2.8,
+    # fixed area in sqft for each BHK
+    "1 BHK": 650,
+    "2 BHK": 950,
+    "3 BHK": 1300,
+    "4 BHK": 1700,
+    "5 BHK+": 2100,
 }
 DEFAULT_ROOM_PRICES = {
-    "Living Room": 85000,
-    "Kitchen": 140000,
-    "Bedroom": 90000,
-    "Bathroom": 55000,
-    "Dining": 65000,
+    # values are interpreted as INR per sqft
+    "Living Room": 850,
+    "Kitchen": 1400,
+    "Bedroom": 900,
+    "Bathroom": 550,
+    "Dining": 650,
 }
 DEFAULT_PACKAGE_MULTIPLIERS = {
     "Essentials": 1,
@@ -39,6 +41,8 @@ class CalculatorSettingsPayload(BaseModel):
     package_multipliers: dict[str, float]
     new_home_multiplier: float = Field(gt=0)
     renovation_multiplier: float = Field(gt=0)
+    villa_design_multiplier: float = Field(gt=0)
+    office_design_multiplier: float = Field(gt=0)
 
 
 class CalculatorSettingsOut(CalculatorSettingsPayload):
@@ -72,6 +76,8 @@ def update_calculator_settings(
     settings.package_multipliers = json.dumps(payload.package_multipliers)
     settings.new_home_multiplier = payload.new_home_multiplier
     settings.renovation_multiplier = payload.renovation_multiplier
+    settings.villa_design_multiplier = payload.villa_design_multiplier
+    settings.office_design_multiplier = payload.office_design_multiplier
     db.add(settings)
     db.commit()
     db.refresh(settings)
@@ -84,12 +90,14 @@ def _get_or_create(db: Session) -> CalculatorSettings:
         return settings
 
     settings = CalculatorSettings(
-        base_price=75000,
+        base_price=1500,
         bhk_multipliers=json.dumps(DEFAULT_BHK_MULTIPLIERS),
         room_prices=json.dumps(DEFAULT_ROOM_PRICES),
         package_multipliers=json.dumps(DEFAULT_PACKAGE_MULTIPLIERS),
         new_home_multiplier=1,
         renovation_multiplier=1.15,
+        villa_design_multiplier=1.25,
+        office_design_multiplier=1.2,
     )
     db.add(settings)
     db.commit()
@@ -106,5 +114,7 @@ def _to_out(settings: CalculatorSettings) -> CalculatorSettingsOut:
         package_multipliers=json.loads(settings.package_multipliers),
         new_home_multiplier=settings.new_home_multiplier,
         renovation_multiplier=settings.renovation_multiplier,
+        villa_design_multiplier=settings.villa_design_multiplier,
+        office_design_multiplier=settings.office_design_multiplier,
         updated_at=settings.updated_at.isoformat(),
     )

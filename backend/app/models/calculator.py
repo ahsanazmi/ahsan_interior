@@ -16,6 +16,8 @@ class CalculatorSettings(Base):
     package_multipliers: Mapped[str] = mapped_column(Text, nullable=False)
     new_home_multiplier: Mapped[float] = mapped_column(Float, nullable=False, default=1)
     renovation_multiplier: Mapped[float] = mapped_column(Float, nullable=False, default=1.15)
+    villa_design_multiplier: Mapped[float] = mapped_column(Float, nullable=False, default=1.25)
+    office_design_multiplier: Mapped[float] = mapped_column(Float, nullable=False, default=1.2)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

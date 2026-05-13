@@ -5,9 +5,11 @@ from app.core.deps import get_current_user
 from app.db import get_db
 from app.models.appointment import Appointment
 from app.models.quote import QuoteRequest
+from app.models.review import Review
 from app.models.user import User
 from app.schemas.admin import AppointmentOut
 from app.schemas.appointment import AppointmentCreate
+from app.schemas.review import ReviewOut
 
 router = APIRouter(prefix="/user", tags=["user-dashboard"])
 
@@ -135,6 +137,27 @@ def my_quotes(
             "created_at": r.created_at.isoformat(),
         }
         for r in rows
+    ]
+
+
+@router.get("/reviews", response_model=list[ReviewOut])
+def my_reviews(
+    _user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[ReviewOut]:
+    rows = db.query(Review).order_by(Review.created_at.desc()).limit(100).all()
+    return [
+        ReviewOut.from_payload(
+            review_id=row.external_id,
+            name=row.name,
+            city=row.city,
+            service=row.service,
+            rating=row.rating,
+            title=row.title,
+            review=row.review,
+            created_at=row.created_at,
+        )
+        for row in rows
     ]
 
 

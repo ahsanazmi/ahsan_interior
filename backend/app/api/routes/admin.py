@@ -11,6 +11,7 @@ from app.models.lead import Lead
 from app.models.marketing_campaign import MarketingCampaign
 from app.models.price_calculation import PriceCalculation
 from app.models.quote import QuoteRequest
+from app.models.review import Review
 from app.models.user import User
 from app.schemas.admin import (
     AppointmentOut,
@@ -334,6 +335,40 @@ def list_quotes(
         }
         for r in rows
     ]
+
+
+@router.get("/reviews")
+def list_reviews(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    rows = db.query(Review).order_by(Review.created_at.desc()).limit(300).all()
+    return [
+        {
+            "id": r.external_id,
+            "name": r.name,
+            "city": r.city,
+            "service": r.service,
+            "rating": r.rating,
+            "title": r.title,
+            "review": r.review,
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in rows
+    ]
+
+
+@router.delete("/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_review(
+    review_id: str,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    review = db.query(Review).filter(Review.external_id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    db.delete(review)
+    db.commit()
 
 
 # ── Delete Appointments ──

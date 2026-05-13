@@ -13,7 +13,13 @@ import catPooja from "@/assets/cat-pooja.jpg";
 import { Button } from "@/components/ui/button";
 import React, { Suspense } from "react";
 import type { CarouselApi } from "@/components/ui/carousel";
-import { fetchPublicImages, resolveApiUrl, type PublicImage } from "@/lib/api";
+import {
+  fetchPublicImages,
+  fetchReviews,
+  resolveApiUrl,
+  type PublicImage,
+  type ReviewEntry,
+} from "@/lib/api";
 const HeroCarousel = React.lazy(() => import("@/components/site/HeroCarousel"));
 
 export const Route = createFileRoute("/")({
@@ -43,27 +49,39 @@ const CATEGORIES = [
   { label: "Pooja Rooms", img: catPooja },
 ];
 
-const TESTIMONIALS = [
+const FEATURED_REVIEWS: ReviewEntry[] = [
   {
+    id: "featured-1",
     name: "Priya & Arjun Mehta",
     city: "Noida",
-    quote:
-      "NextGen Living Space transformed our 3BHK into a dream home. The designer understood our taste perfectly and the execution was flawless.",
+    service: "3BHK interior design",
     rating: 5,
+    title: "Flawless execution",
+    review:
+      "NextGen Living Space transformed our 3BHK into a dream home. The designer understood our taste perfectly and the execution was flawless.",
+    created_at: new Date().toISOString(),
   },
   {
+    id: "featured-2",
     name: "Rohan Sharma",
     city: "Greater Noida",
-    quote:
-      "From modular kitchen to wardrobes, every detail was thoughtfully crafted. The lifetime warranty is the cherry on top.",
+    service: "Modular kitchen and wardrobes",
     rating: 5,
+    title: "Great detailing",
+    review:
+      "From modular kitchen to wardrobes, every detail was thoughtfully crafted. The lifetime warranty is the cherry on top.",
+    created_at: new Date().toISOString(),
   },
   {
+    id: "featured-3",
     name: "Anita Reddy",
     city: "Agra",
-    quote:
-      "Smooth project management, transparent pricing and beautiful design. Couldn't have asked for a better experience.",
+    service: "Full home interiors",
     rating: 5,
+    title: "Smooth process",
+    review:
+      "Smooth project management, transparent pricing and beautiful design. Couldn't have asked for a better experience.",
+    created_at: new Date().toISOString(),
   },
 ];
 
@@ -103,6 +121,8 @@ function HomePage() {
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<PublicImage[]>([]);
   const [imagesLoading, setImagesLoading] = useState(true);
+  const [reviews, setReviews] = useState<ReviewEntry[]>([]);
+
 
   useEffect(() => {
     if (!carouselApi) {
@@ -168,6 +188,26 @@ function HomePage() {
       .finally(() => {
         if (active) {
           setImagesLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchReviews(6)
+      .then((entries) => {
+        if (active) {
+          setReviews(entries);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setReviews(FEATURED_REVIEWS);
         }
       });
 
@@ -501,36 +541,57 @@ function HomePage() {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
+      {/* REVIEWS CAROUSEL */}
       <section className="container-page py-24">
-        <div className="max-w-2xl">
-          <p className="text-sm uppercase tracking-widest text-primary font-semibold mb-3">
-            Real stories
-          </p>
-          <h2 className="font-display text-4xl md:text-6xl text-plum">
-            Loved by homeowners across India
-          </h2>
+        <div className="flex items-end justify-between gap-6 mb-12">
+          <div className="max-w-2xl">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">
+              Real stories
+            </p>
+            <h2 className="font-display text-4xl text-plum md:text-6xl">
+              Loved by homeowners across India
+            </h2>
+            <p className="mt-4 max-w-2xl text-muted-foreground">
+              Real reviews from customers who have transformed their homes with us. Want to share your experience?
+            </p>
+          </div>
+          <Button asChild variant="outline" className="hidden rounded-full md:inline-flex">
+            <Link to="/dashboard">Leave a review</Link>
+          </Button>
         </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {(reviews.length > 0 ? reviews : FEATURED_REVIEWS).map((review) => (
             <figure
-              key={t.name}
-              className="flex flex-col rounded-[1.5rem] border border-border/70 bg-white/85 p-7 shadow-soft backdrop-blur-sm"
+              key={review.id}
+              className="flex flex-col rounded-[1.5rem] border border-border/70 bg-white/85 p-7 shadow-soft backdrop-blur-sm hover:shadow-card transition duration-300"
             >
               <div className="flex gap-0.5 text-primary">
-                {Array.from({ length: t.rating }).map((_, i) => (
+                {Array.from({ length: review.rating }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
               </div>
-              <blockquote className="mt-4 text-foreground/80 flex-1">"{t.quote}"</blockquote>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                {review.service}
+              </p>
+              {review.title ? (
+                <p className="mt-2 font-semibold text-plum">{review.title}</p>
+              ) : null}
+              <blockquote className="mt-4 flex-1 text-foreground/80">
+                {review.review}
+              </blockquote>
               <figcaption className="mt-6">
-                <div className="font-display text-lg text-plum">{t.name}</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                  {t.city}
+                <div className="font-display text-lg text-plum">{review.name}</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {review.city}
                 </div>
               </figcaption>
             </figure>
           ))}
+        </div>
+        <div className="mt-8 text-center md:hidden">
+          <Button asChild className="rounded-full">
+            <Link to="/dashboard">Leave a review</Link>
+          </Button>
         </div>
       </section>
 

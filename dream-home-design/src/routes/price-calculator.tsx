@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Minus, Plus } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchCalculatorSettings, submitQuote, savePriceCalculation, type CalculatorSettings } from "@/lib/api";
 import heroLiving from "@/assets/hero-living.jpg";
@@ -42,32 +42,34 @@ export const Route = createFileRoute("/price-calculator")({
 const STEP_LABELS = [
   "SCOPE OF WORK",
   "BHK TYPE",
-  "ROOMS TO DESIGN",
   "PACKAGE",
   "GET QUOTE",
 ] as const;
-const SCOPE_OPTIONS = ["Interiors for new home", "Renovation of existing home"] as const;
+const SCOPE_OPTIONS = [
+  "Interiors for new home",
+  "Renovation of existing home",
+  "Villa design",
+  "Office design",
+] as const;
 const BHK_OPTIONS = ["1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK+"] as const;
-const ROOM_KEYS = ["Living Room", "Kitchen", "Bedroom", "Bathroom", "Dining"] as const;
-
 type PackageType = "Essentials" | "Premium" | "Luxe";
 
 const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   id: 0,
-  base_price: 75000,
+  base_price: 1500,
   bhk_multipliers: {
-    "1 BHK": 1,
-    "2 BHK": 1.35,
-    "3 BHK": 1.75,
-    "4 BHK": 2.25,
-    "5 BHK+": 2.8,
+    "1 BHK": 650,
+    "2 BHK": 950,
+    "3 BHK": 1300,
+    "4 BHK": 1700,
+    "5 BHK+": 2100,
   },
   room_prices: {
-    "Living Room": 85000,
-    Kitchen: 140000,
-    Bedroom: 90000,
-    Bathroom: 55000,
-    Dining: 65000,
+    "Living Room": 850,
+    Kitchen: 1400,
+    Bedroom: 900,
+    Bathroom: 550,
+    Dining: 650,
   },
   package_multipliers: {
     Essentials: 1,
@@ -76,6 +78,8 @@ const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   },
   new_home_multiplier: 1,
   renovation_multiplier: 1.15,
+  villa_design_multiplier: 1.25,
+  office_design_multiplier: 1.2,
   updated_at: "",
 };
 
@@ -92,13 +96,6 @@ function PriceCalc() {
   const [step, setStep] = useState(0);
   const [scope, setScope] = useState("");
   const [bhk, setBhk] = useState<string>("");
-  const [rooms, setRooms] = useState<Record<string, number>>({
-    "Living Room": 1,
-    Kitchen: 1,
-    Bedroom: 1,
-    Bathroom: 1,
-    Dining: 1,
-  });
   const [selectedPackage, setSelectedPackage] = useState<PackageType | "">("");
 
   const [name, setName] = useState("");
@@ -107,6 +104,7 @@ function PriceCalc() {
   const [city, setCity] = useState("Noida");
   const [updatesOnWhatsapp, setUpdatesOnWhatsapp] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [calculatorSettings, setCalculatorSettings] = useState<CalculatorSettings>(
     DEFAULT_CALCULATOR_SETTINGS,
   );
@@ -119,53 +117,66 @@ function PriceCalc() {
       });
   }, []);
 
-  const totalRooms = useMemo(
-    () => Object.values(rooms).reduce((acc, count) => acc + count, 0),
-    [rooms],
-  );
+  const fixedSqft = useMemo(() => {
+    const raw = calculatorSettings.bhk_multipliers[bhk] ?? 0;
+    // Backward compatibility for old multiplier values (1.35 etc.)
+    return raw > 0 && raw <= 10 ? Math.round(raw * 1000) : Math.round(raw);
+  }, [bhk, calculatorSettings.bhk_multipliers]);
 
   const estimatedPrice = useMemo(() => {
-    const roomTotal = Object.entries(rooms).reduce((total, [room, count]) => {
-      return total + (calculatorSettings.room_prices[room] ?? 0) * count;
-    }, calculatorSettings.base_price);
-    const bhkMultiplier = calculatorSettings.bhk_multipliers[bhk] ?? 1;
+    const areaBasedTotal = (calculatorSettings.base_price ?? 0) * fixedSqft;
+
     const packageMultiplier = selectedPackage
       ? calculatorSettings.package_multipliers[selectedPackage] ?? 1
       : 1;
     const scopeMultiplier =
       scope === "Renovation of existing home"
         ? calculatorSettings.renovation_multiplier
-        : calculatorSettings.new_home_multiplier;
+        : scope === "Villa design"
+          ? calculatorSettings.villa_design_multiplier
+          : scope === "Office design"
+            ? calculatorSettings.office_design_multiplier
+            : calculatorSettings.new_home_multiplier;
 
-    return (
-      Math.round((roomTotal * bhkMultiplier * packageMultiplier * scopeMultiplier) / 1000) * 1000
-    );
-  }, [bhk, calculatorSettings, rooms, scope, selectedPackage]);
+    return Math.round((areaBasedTotal * packageMultiplier * scopeMultiplier) / 1000) * 1000;
+  }, [calculatorSettings.base_price, fixedSqft, scope, selectedPackage, calculatorSettings.package_multipliers, calculatorSettings.new_home_multiplier, calculatorSettings.renovation_multiplier, calculatorSettings.villa_design_multiplier, calculatorSettings.office_design_multiplier]);
 
   function startFlow() {
     setStarted(true);
     setStep(0);
+    setSubmitted(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function updateRoom(room: string, delta: number) {
-    setRooms((prev) => {
-      const next = Math.max(0, (prev[room] ?? 0) + delta);
-      return { ...prev, [room]: next };
-    });
+  function startNewCalculation() {
+    // Reset form
+    setStep(0);
+    setScope("");
+    setBhk("");
+    setSelectedPackage("");
+    setName("");
+    setEmail("");
+    setPhone("");
+    setCity("Noida");
+    setUpdatesOnWhatsapp(true);
+    setSubmitted(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function canProceed() {
-    if (step === 0) return scope.length > 0;
-    if (step === 1) return bhk.length > 0;
-    if (step === 2) return totalRooms > 0;
-    if (step === 3) return selectedPackage.length > 0;
+  function hasValidContactDetails() {
     return (
       name.trim().length >= 2 &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
       /^[0-9 +\-()]{7,20}$/.test(phone.trim()) &&
       city.trim().length > 0
     );
+  }
+
+  function canProceed() {
+    if (step === 0) return scope.length > 0;
+    if (step === 1) return bhk.length > 0;
+    if (step === 2) return selectedPackage.length > 0;
+    return hasValidContactDetails();
   }
 
   async function onNext() {
@@ -182,8 +193,15 @@ function PriceCalc() {
     // Final step — submit to backend
     setSubmitting(true);
     try {
-      const homeType = scope.includes("new home") ? "new_home" : "renovation";
-      
+      const homeType =
+        scope === "Interiors for new home"
+          ? "new_home"
+          : scope === "Renovation of existing home"
+            ? "renovation"
+            : scope === "Villa design"
+              ? "villa"
+              : "office_design";
+
       // Save calculation history
       await savePriceCalculation({
         name: name.trim(),
@@ -193,7 +211,7 @@ function PriceCalc() {
         whatsapp_updates: updatesOnWhatsapp,
         scope,
         bhk,
-        rooms: JSON.stringify(rooms),
+        rooms: JSON.stringify({ fixed_sqft: fixedSqft }),
         package: selectedPackage,
         home_type: homeType,
         total_price: estimatedPrice,
@@ -208,25 +226,15 @@ function PriceCalc() {
         whatsapp_updates: updatesOnWhatsapp,
         scope,
         bhk,
-        rooms: JSON.stringify(rooms),
+        rooms: JSON.stringify({ fixed_sqft: fixedSqft }),
         package: selectedPackage,
         home_type: homeType,
         total_price: estimatedPrice,
       });
 
       toast.success("Your estimate request is submitted! Our team will contact you shortly.");
-      // Reset form
-      setStarted(false);
-      setStep(0);
-      setScope("");
-      setBhk("");
-      setRooms({ "Living Room": 1, Kitchen: 1, Bedroom: 1, Bathroom: 1, Dining: 1 });
-      setSelectedPackage("");
-      setName("");
-      setEmail("");
-      setPhone("");
-      setCity("Noida");
-      setUpdatesOnWhatsapp(true);
+      // Show estimate result
+      setSubmitted(true);
     } catch (err: any) {
       toast.error(err?.message || "Failed to submit. Please try again.");
     } finally {
@@ -237,6 +245,53 @@ function PriceCalc() {
   function onBack() {
     if (step === 0) return;
     setStep((s) => s - 1);
+  }
+
+  if (submitted) {
+    return (
+      <section className="min-h-[calc(100vh-8rem)] bg-muted/35">
+        <div className="container-page py-20 md:py-32">
+          <div className="mx-auto flex max-w-2xl flex-col items-center rounded-2xl border border-border bg-card p-8 shadow-soft md:p-12">
+            <div className="mb-6 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Check className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-center font-display text-4xl text-plum md:text-5xl">
+              Your Estimate is Ready!
+            </h1>
+            <p className="mt-4 text-center text-muted-foreground">
+              Thank you for using our calculator. Here's your personalized price estimate.
+            </p>
+
+            <div className="mt-10 w-full rounded-xl border border-primary/20 bg-primary/5 p-6 text-center">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Estimated Price
+              </p>
+              <p className="mt-2 text-5xl font-bold text-plum">
+                {formatRupees(estimatedPrice)}
+              </p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Indicative price for {scope} | {bhk} | {selectedPackage} Package
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Final quote may change after site visit and detailed requirements review.
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-3 w-full">
+              <p className="text-center text-sm text-muted-foreground">
+                Our team will contact you at <span className="font-semibold text-plum">{email}</span> or <span className="font-semibold text-plum">{phone}</span> shortly.
+              </p>
+            </div>
+
+            <div className="mt-8 flex gap-4">
+              <Button type="button" className="rounded-full px-8" onClick={startNewCalculation}>
+                Calculate Another Estimate
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   if (!started) {
@@ -297,20 +352,20 @@ function PriceCalc() {
             <div className="mx-auto mt-10 grid max-w-4xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
+                  title: "Choose your scope",
+                  desc: "Select the type of design work you need for your space.",
+                },
+                {
                   title: "Choose your BHK type",
                   desc: "The type of house helps us understand your home configuration.",
                 },
                 {
-                  title: "Select your house size",
-                  desc: "This helps us provide a more accurate estimate for your interiors.",
-                },
-                {
-                  title: "Pick rooms to design",
-                  desc: "This lets us understand the work scope for your home interiors.",
-                },
-                {
                   title: "Choose your package",
                   desc: "Tune the calculation based on products and accessories that match your lifestyle.",
+                },
+                {
+                  title: "Get your estimate",
+                  desc: "Fill your details to receive your personalized price estimate.",
                 },
               ].map((stepItem, idx) => (
                 <article key={stepItem.title} className="text-center">
@@ -459,18 +514,16 @@ function PriceCalc() {
               <div key={label} className="flex flex-1 items-center">
                 <div className="flex flex-col items-center">
                   <span
-                    className={`grid h-5 w-5 place-items-center rounded-full border text-[10px] ${
-                      idx <= step
+                    className={`grid h-5 w-5 place-items-center rounded-full border text-[10px] ${idx <= step
                         ? "border-plum bg-plum text-white"
                         : "border-muted-foreground/35 text-muted-foreground"
-                    }`}
+                      }`}
                   >
                     {idx < step ? <Check className="h-3 w-3" /> : ""}
                   </span>
                   <span
-                    className={`mt-2 text-[10px] font-semibold tracking-wide ${
-                      idx === step ? "text-plum" : "text-muted-foreground"
-                    }`}
+                    className={`mt-2 text-[10px] font-semibold tracking-wide ${idx === step ? "text-plum" : "text-muted-foreground"
+                      }`}
                   >
                     {label}
                   </span>
@@ -479,7 +532,7 @@ function PriceCalc() {
               </div>
             ))}
           </div>
-          <div className="text-xl font-semibold text-plum">{step + 1}/5</div>
+          <div className="text-xl font-semibold text-plum">{step + 1}/4</div>
         </div>
       </div>
 
@@ -548,46 +601,6 @@ function PriceCalc() {
 
             {step === 2 && (
               <>
-                <h1 className="text-center font-display text-4xl text-plum">
-                  Select the rooms you would like us to design
-                </h1>
-                <p className="mt-3 text-center text-muted-foreground">
-                  To know more about this, <span className="text-primary">click here</span>
-                </p>
-                <div className="mx-auto mt-8 max-w-md space-y-3">
-                  {ROOM_KEYS.map((room) => (
-                    <div
-                      key={room}
-                      className="flex items-center justify-between rounded-md border border-border px-4 py-3"
-                    >
-                      <span className="text-lg font-medium text-plum">{room}</span>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => updateRoom(room, -1)}
-                          className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-primary"
-                          aria-label={`Decrease ${room}`}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="w-4 text-center text-lg font-semibold">{rooms[room]}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateRoom(room, 1)}
-                          className="grid h-6 w-6 place-items-center rounded-full bg-primary text-white"
-                          aria-label={`Increase ${room}`}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {step === 3 && (
-              <>
                 <h1 className="text-center font-display text-4xl text-plum">Pick your package</h1>
                 <div className="mx-auto mt-8 max-w-md space-y-3">
                   {[
@@ -638,23 +651,12 @@ function PriceCalc() {
               </>
             )}
 
-            {step === 4 && (
+            {step === 3 && (
               <>
                 <h1 className="text-center font-display text-4xl text-plum">
                   Your estimate is almost ready
                 </h1>
                 <div className="mx-auto mt-8 max-w-md space-y-4">
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-                      Estimated price
-                    </p>
-                    <p className="mt-1 text-3xl font-bold text-plum">
-                      {formatRupees(estimatedPrice)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Indicative price. Final quote may change after site visit.
-                    </p>
-                  </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="name">Name</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -715,6 +717,10 @@ function PriceCalc() {
                     </Select>
                   </div>
 
+                  <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center text-sm text-muted-foreground">
+                    Estimate will be shown after you submit this form.
+                  </p>
+
                   <p className="pt-3 text-xs leading-6 text-muted-foreground">
                     By submitting this form, you agree to the privacy policy and terms and
                     conditions.
@@ -728,9 +734,8 @@ function PriceCalc() {
             <button
               type="button"
               onClick={onBack}
-              className={`text-sm font-semibold tracking-wide ${
-                step === 0 ? "pointer-events-none text-muted-foreground/40" : "text-primary"
-              }`}
+              className={`text-sm font-semibold tracking-wide ${step === 0 ? "pointer-events-none text-muted-foreground/40" : "text-primary"
+                }`}
             >
               BACK
             </button>

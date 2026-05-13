@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { CalendarDays, MapPin, Phone, Clock, LogOut, User, Loader2, Trash2, Edit2, AlertCircle, CheckCircle2, Info, Lightbulb, ArrowRight } from "lucide-react";
+import { CalendarDays, MapPin, Phone, Clock, LogOut, User, Loader2, Trash2, Edit2, AlertCircle, CheckCircle2, Info, Lightbulb, ArrowRight, Star, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fetchMyBookings, fetchMyQuotes, deleteMyBooking, updateMyBooking, deleteMyQuote, updateMyQuote, type BookingItem, type QuoteItem, type AppointmentPayload } from "@/lib/api";
+import { fetchMyBookings, fetchMyQuotes, fetchMyReviews, deleteMyBooking, updateMyBooking, deleteMyQuote, updateMyQuote, resolveApiUrl, submitReview, type BookingItem, type QuoteItem, type AppointmentPayload, type ReviewEntry } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard")({
@@ -23,10 +23,33 @@ function UserDashboard() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [quotes, setQuotes] = useState<QuoteItem[]>([]);
+  const [reviews, setReviews] = useState<ReviewEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"bookings" | "quotes">("bookings");
+  const [tab, setTab] = useState<"bookings" | "quotes" | "reviews">("bookings");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Partial<AppointmentPayload>>({});
+  const [reviewName, setReviewName] = useState("");
+  const [reviewCity, setReviewCity] = useState("");
+  const [reviewService, setReviewService] = useState("Full home interiors");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewText, setReviewText] = useState("");
+  const [reviewImage, setReviewImage] = useState<File | null>(null);
+  const [reviewImageInputKey, setReviewImageInputKey] = useState(0);
+  const [reviewImagePreview, setReviewImagePreview] = useState<string | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!reviewImage) {
+      setReviewImagePreview(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(reviewImage);
+    setReviewImagePreview(previewUrl);
+
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [reviewImage]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -38,9 +61,9 @@ function UserDashboard() {
       navigate({ to: "/admin" });
       return;
     }
-    Promise.all([fetchMyBookings(), fetchMyQuotes()])
-      .then(([b, q]) => { setBookings(b); setQuotes(q); })
-      .catch(() => { setBookings([]); setQuotes([]); })
+    Promise.all([fetchMyBookings(), fetchMyQuotes(), fetchMyReviews()])
+      .then(([b, q, r]) => { setBookings(b); setQuotes(q); setReviews(r); })
+      .catch(() => { setBookings([]); setQuotes([]); setReviews([]); })
       .finally(() => setLoading(false));
   }, [user, authLoading, navigate]);
 
@@ -249,6 +272,14 @@ function UserDashboard() {
           >
             Quote Requests ({quotes.length})
           </button>
+          <button
+            onClick={() => setTab("reviews")}
+            className={`px-4 py-3 font-semibold transition-colors ${
+              tab === "reviews" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Reviews ({reviews.length})
+          </button>
         </div>
 
         {loading ? (
@@ -327,47 +358,281 @@ function UserDashboard() {
               ))}
             </div>
           )
-        ) : quotes.length === 0 ? (
-          <div className="mt-12 rounded-2xl border border-dashed border-border bg-muted/40 p-12 text-center">
-            <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <h2 className="mt-4 text-xl font-semibold text-plum">No quotes yet</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Get a price quote for your project.
-            </p>
-            <Button asChild className="mt-6 rounded-full px-8">
-              <Link to="/price-calculator">Get a quote</Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
-            <table className="w-full min-w-[1000px] text-left text-sm">
-              <thead className="border-b border-border bg-muted/40">
-                <tr>
-                  <th className="px-5 py-3 font-semibold text-plum">Name</th>
-                  <th className="px-5 py-3 font-semibold text-plum">Scope</th>
-                  <th className="px-5 py-3 font-semibold text-plum">BHK</th>
-                  <th className="px-5 py-3 font-semibold text-plum">Package</th>
-                  <th className="px-5 py-3 font-semibold text-plum">Date</th>
-                  <th className="px-5 py-3 font-semibold text-plum">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quotes.map((q) => (
-                  <tr key={q.external_id} className="border-b border-border/50 hover:bg-muted/20">
-                    <td className="px-5 py-3 font-medium">{q.name}</td>
-                    <td className="px-5 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{q.scope}</span></td>
-                    <td className="px-5 py-3 font-semibold">{q.bhk}</td>
-                    <td className="px-5 py-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">{q.package}</span></td>
-                    <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</td>
-                    <td className="px-5 py-3 flex gap-2">
-                      <button onClick={() => handleDeleteQuote(q.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
-                    </td>
+        ) : tab === "quotes" ? (
+          quotes.length === 0 ? (
+            <div className="mt-12 rounded-2xl border border-dashed border-border bg-muted/40 p-12 text-center">
+              <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <h2 className="mt-4 text-xl font-semibold text-plum">No quotes yet</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Get a price quote for your project.
+              </p>
+              <Button asChild className="mt-6 rounded-full px-8">
+                <Link to="/price-calculator">Get a quote</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
+              <table className="w-full min-w-[1000px] text-left text-sm">
+                <thead className="border-b border-border bg-muted/40">
+                  <tr>
+                    <th className="px-5 py-3 font-semibold text-plum">Name</th>
+                    <th className="px-5 py-3 font-semibold text-plum">Scope</th>
+                    <th className="px-5 py-3 font-semibold text-plum">BHK</th>
+                    <th className="px-5 py-3 font-semibold text-plum">Package</th>
+                    <th className="px-5 py-3 font-semibold text-plum">Date</th>
+                    <th className="px-5 py-3 font-semibold text-plum">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {quotes.map((q) => (
+                    <tr key={q.external_id} className="border-b border-border/50 hover:bg-muted/20">
+                      <td className="px-5 py-3 font-medium">{q.name}</td>
+                      <td className="px-5 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{q.scope}</span></td>
+                      <td className="px-5 py-3 font-semibold">{q.bhk}</td>
+                      <td className="px-5 py-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">{q.package}</span></td>
+                      <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</td>
+                      <td className="px-5 py-3 flex gap-2">
+                        <button onClick={() => handleDeleteQuote(q.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : tab === "reviews" ? (
+          <>
+            {/* Review Submission Form */}
+            <div className="mt-8 rounded-2xl border border-border bg-white p-6 shadow-soft">
+              <div className="flex items-center gap-3 text-primary mb-4">
+                <Star className="h-5 w-5 fill-current" />
+                <p className="text-sm font-semibold uppercase tracking-[0.3em]">Share Your Experience</p>
+              </div>
+              <h3 className="font-display text-2xl text-plum mb-4">Leave a review</h3>
+              <form
+                className="space-y-4"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (reviewName.trim().length < 2) {
+                    toast.error("Please enter your full name.");
+                    return;
+                  }
+                  if (reviewCity.trim().length < 2) {
+                    toast.error("Please enter your city.");
+                    return;
+                  }
+                  if (reviewText.trim().length < 10) {
+                    toast.error("Please share a few details about your experience.");
+                    return;
+                  }
+                  setReviewLoading(true);
+                  try {
+                    const response = await submitReview({
+                      name: reviewName.trim(),
+                      city: reviewCity.trim(),
+                      service: reviewService,
+                      rating: reviewRating,
+                      title: reviewTitle.trim() || null,
+                      review: reviewText.trim(),
+                      source: "dashboard-review-form",
+                      review_image: reviewImage,
+                    });
+                    toast.success(response.message);
+                    setReviews([response.review, ...reviews]);
+                    setReviewName("");
+                    setReviewCity("");
+                    setReviewService("Full home interiors");
+                    setReviewRating(5);
+                    setReviewTitle("");
+                    setReviewText("");
+                    setReviewImage(null);
+                    setReviewImageInputKey((current) => current + 1);
+                  } catch (error) {
+                    const message = error instanceof Error ? error.message : "Unable to submit your review.";
+                    toast.error(message);
+                  } finally {
+                    setReviewLoading(false);
+                  }
+                }}
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-plum" htmlFor="dashboard-review-name">
+                      Full name
+                    </label>
+                    <input
+                      id="dashboard-review-name"
+                      className="h-11 w-full rounded-lg border border-border bg-white px-4 text-sm outline-none transition focus:border-primary"
+                      value={reviewName}
+                      onChange={(e) => setReviewName(e.target.value)}
+                      placeholder="Your name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-plum" htmlFor="dashboard-review-city">
+                      City
+                    </label>
+                    <input
+                      id="dashboard-review-city"
+                      className="h-11 w-full rounded-lg border border-border bg-white px-4 text-sm outline-none transition focus:border-primary"
+                      value={reviewCity}
+                      onChange={(e) => setReviewCity(e.target.value)}
+                      placeholder="Your city"
+                      required
+                    />
+                  </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-plum" htmlFor="dashboard-review-image">
+                    Upload photo <span className="text-muted-foreground">(optional)</span>
+                  </label>
+                  <input
+                    key={reviewImageInputKey}
+                    id="dashboard-review-image"
+                    type="file"
+                    accept="image/*"
+                    className="h-11 w-full rounded-lg border border-border bg-white px-4 py-2 text-sm outline-none transition focus:border-primary"
+                    onChange={(e) => setReviewImage(e.target.files?.[0] ?? null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Share a project photo if you want. It is optional.
+                  </p>
+                  {reviewImagePreview ? (
+                    <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
+                      <img
+                        src={reviewImagePreview}
+                        alt="Selected review upload preview"
+                        className="h-48 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-plum" htmlFor="dashboard-review-service">
+                      Service reviewed
+                    </label>
+                    <select
+                      id="dashboard-review-service"
+                      className="h-11 w-full rounded-lg border border-border bg-white px-4 text-sm outline-none transition focus:border-primary"
+                      value={reviewService}
+                      onChange={(e) => setReviewService(e.target.value)}
+                    >
+                      {[
+                        "Full home interiors",
+                        "Modular kitchen",
+                        "Wardrobes",
+                        "Living room",
+                        "Bedroom",
+                        "Bathroom",
+                        "Office space",
+                        "Other",
+                      ].map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-plum" htmlFor="dashboard-review-rating">
+                      Rating
+                    </label>
+                    <select
+                      id="dashboard-review-rating"
+                      className="h-11 w-full rounded-lg border border-border bg-white px-4 text-sm outline-none transition focus:border-primary"
+                      value={reviewRating}
+                      onChange={(e) => setReviewRating(Number(e.target.value))}
+                    >
+                      {[5, 4, 3, 2, 1].map((rating) => (
+                        <option key={rating} value={rating}>
+                          {rating} star{rating > 1 ? "s" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-plum" htmlFor="dashboard-review-title">
+                      Review title (optional)
+                    </label>
+                    <input
+                      id="dashboard-review-title"
+                      className="h-11 w-full rounded-lg border border-border bg-white px-4 text-sm outline-none transition focus:border-primary"
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                      placeholder="E.g. Excellent service"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-plum" htmlFor="dashboard-review-text">
+                    Your review
+                  </label>
+                  <textarea
+                    id="dashboard-review-text"
+                    className="min-h-24 w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Tell others about your experience..."
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full rounded-lg" disabled={reviewLoading}>
+                  {reviewLoading ? "Submitting..." : "Publish review"}
+                  {!reviewLoading ? <Send className="ml-2 h-4 w-4" /> : null}
+                </Button>
+              </form>
+            </div>
+
+            {/* Reviews List */}
+            <div className="mt-8">
+              <h3 className="font-display text-xl text-plum mb-4">Your reviews</h3>
+              {reviews.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-12 text-center">
+                  <Star className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                  <h2 className="mt-4 text-lg font-semibold text-plum">No reviews yet</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Share your experience above to help other homeowners.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                  {reviews.map((review) => (
+                    <article
+                      key={review.id}
+                      className="rounded-2xl border border-border bg-white p-5 shadow-soft"
+                    >
+                      {review.review_image_url ? (
+                        <img
+                          src={resolveApiUrl(review.review_image_url)}
+                          alt={`${review.name} review photo`}
+                          className="mb-4 h-40 w-full rounded-xl object-cover"
+                        />
+                      ) : null}
+                      <div className="flex items-center gap-1 text-primary">
+                        {Array.from({ length: review.rating }).map((_, i) => (
+                          <Star key={i} className="h-4 w-4 fill-current" />
+                        ))}
+                      </div>
+                      <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        {review.service}
+                      </p>
+                      {review.title ? (
+                        <p className="mt-2 font-semibold text-plum">{review.title}</p>
+                      ) : null}
+                      <p className="mt-2 text-sm text-foreground/85">{review.review}</p>
+                      <div className="mt-4 text-xs text-muted-foreground">
+                        {review.name} • {review.city}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
       </section>
     </>
   );

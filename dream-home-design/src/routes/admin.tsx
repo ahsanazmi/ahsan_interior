@@ -10,7 +10,7 @@ import {
 import {
   CalendarDays, Users, Clock, LogOut, ShieldCheck, Loader2, MapPin,
   UserPlus, Image, FileText, Tag, Plus, Trash2, Upload, Calculator, Edit2, X,
-  Megaphone, Mail, MessageSquare, Sparkles, Send,
+  Megaphone, Mail, MessageSquare, Sparkles, Send, Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import {
   fetchAdminBlogs, createAdminBlog, deleteAdminBlog,
   fetchAdminImages, uploadAdminImage, deleteAdminImage,
   fetchAdminOffers, createAdminOffer, deleteAdminOffer,
+  fetchAdminReviews, deleteAdminReview,
   fetchAdminQuotes, deleteAdminAppointment, updateAdminAppointment,
   deleteAdminQuote, updateAdminQuote, deleteAdminLead, updateAdminLead,
   fetchAdminPriceCalculations, deleteAdminPriceCalculation, updateAdminPriceCalculation,
@@ -39,6 +40,7 @@ import {
   type BlogItem, type BlogPayload,
   type ImageItem,
   type OfferItem, type OfferPayload,
+  type ReviewEntry,
   type QuoteItem, type PriceCalculationItem,
   type CalculatorSettings,
   type AppointmentPayload,
@@ -56,7 +58,7 @@ export const Route = createFileRoute("/admin")({
   }),
 });
 
-type Tab = "appointments" | "leads" | "quotes" | "calculation-history" | "calculator" | "blogs" | "images" | "offers" | "marketing";
+type Tab = "appointments" | "leads" | "quotes" | "reviews" | "calculation-history" | "calculator" | "blogs" | "images" | "offers" | "marketing";
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/api$/, "");
 
@@ -68,6 +70,7 @@ function AdminDashboard() {
   const [appointments, setAppointments] = useState<BookingItem[]>([]);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [quotes, setQuotes] = useState<QuoteItem[]>([]);
+  const [reviews, setReviews] = useState<ReviewEntry[]>([]);
   const [priceCalculations, setPriceCalculations] = useState<PriceCalculationItem[]>([]);
   const [blogs, setBlogs] = useState<BlogItem[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -87,9 +90,9 @@ function AdminDashboard() {
       fetchAdminStats(), fetchAdminAppointments(), fetchAdminLeads(),
       fetchAdminBlogs(), fetchAdminImages(), fetchAdminOffers(),
       fetchAdminQuotes(), fetchAdminCalculatorSettings(), fetchAdminPriceCalculations(),
-      fetchAdminMarketingCampaigns(),
+      fetchAdminMarketingCampaigns(), fetchAdminReviews(),
     ])
-      .then(([s, a, l, b, i, o, q, c, p, m]) => {
+      .then(([s, a, l, b, i, o, q, c, p, m, r]) => {
         if (!mounted) return;
         if (s.status === "fulfilled") setStats(s.value);
         if (a.status === "fulfilled") setAppointments(a.value);
@@ -101,8 +104,9 @@ function AdminDashboard() {
         if (c.status === "fulfilled") setCalculatorSettings(c.value);
         if (p.status === "fulfilled") setPriceCalculations(p.value);
         if (m.status === "fulfilled") setMarketingCampaigns(m.value);
+        if (r.status === "fulfilled") setReviews(r.value);
 
-        if ([s, a, l, b, i, o, q, c, p, m].some((result) => result.status === "rejected")) {
+        if ([s, a, l, b, i, o, q, c, p, m, r].some((result) => result.status === "rejected")) {
           toast.error("Some admin data could not load. Please check backend/database.");
         }
       })
@@ -121,6 +125,7 @@ function AdminDashboard() {
     { key: "appointments", label: "Appointments", icon: CalendarDays },
     { key: "leads", label: "Leads", icon: UserPlus },
     { key: "quotes", label: "Quotes", icon: Calculator },
+    { key: "reviews", label: "Reviews", icon: Star },
     { key: "calculation-history", label: "Calculation History", icon: Calculator },
     { key: "calculator", label: "Calculator", icon: Calculator },
     { key: "blogs", label: "Blogs", icon: FileText },
@@ -184,6 +189,7 @@ function AdminDashboard() {
               {tab === "appointments" && <AppointmentsTab data={appointments} onDelete={(id) => { setAppointments(appointments.filter(a => a.id !== id)); }} onChange={setAppointments} />}
               {tab === "leads" && <LeadsTab data={leads} onDelete={(id) => { setLeads(leads.filter(l => l.id !== id)); }} onChange={setLeads} />}
               {tab === "quotes" && <QuotesTab data={quotes} onDelete={(id) => { setQuotes(quotes.filter(q => q.id !== id)); }} onChange={setQuotes} />}
+              {tab === "reviews" && <ReviewsTab data={reviews} onDelete={(id) => { setReviews(reviews.filter((r) => r.id !== id)); }} onChange={setReviews} />}
               {tab === "calculation-history" && <CalculationHistoryTab data={priceCalculations} onDelete={(id) => { setPriceCalculations(priceCalculations.filter(p => p.id !== id)); }} onChange={setPriceCalculations} />}
               {tab === "calculator" && (
                 calculatorSettings ? (
@@ -277,7 +283,7 @@ function AppointmentsTab({ data, onDelete }: { data: BookingItem[]; onDelete: (i
 
   // Filter data
   const filteredData = data.filter(a => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.phone.includes(searchTerm);
@@ -346,7 +352,7 @@ function AppointmentsTab({ data, onDelete }: { data: BookingItem[]; onDelete: (i
           <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
             <table className="w-full min-w-[1200px] text-left text-sm">
               <thead className="border-b border-border bg-muted/40">
-                <tr>{["Name","Email","Phone","City","Date","Status","Email","Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
+                <tr>{["Name", "Email", "Phone", "City", "Date", "Status", "Email", "Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
               </thead>
               <tbody>
                 {filteredData.map(a => (
@@ -357,12 +363,11 @@ function AppointmentsTab({ data, onDelete }: { data: BookingItem[]; onDelete: (i
                     <td className="px-4 py-3 text-xs"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{a.city}</td>
                     <td className="px-4 py-3 text-xs">{a.preferred_date} {a.preferred_time}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
-                        a.status === "confirmed" ? "bg-emerald-100 text-emerald-700" :
-                        a.status === "completed" ? "bg-blue-100 text-blue-700" :
-                        a.status === "cancelled" ? "bg-red-100 text-red-700" :
-                        "bg-amber-100 text-amber-700"
-                      }`}>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${a.status === "confirmed" ? "bg-emerald-100 text-emerald-700" :
+                          a.status === "completed" ? "bg-blue-100 text-blue-700" :
+                            a.status === "cancelled" ? "bg-red-100 text-red-700" :
+                              "bg-amber-100 text-amber-700"
+                        }`}>
                         {a.status}
                       </span>
                     </td>
@@ -510,7 +515,7 @@ function LeadsTab({ data, onDelete }: { data: LeadItem[]; onDelete: (id: number)
           </div>
           <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40">
-              <tr>{["Name","Email","Phone","City","Query Type","Message","WhatsApp","Source","Date","Actions"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
+              <tr>{["Name", "Email", "Phone", "City", "Query Type", "Message", "WhatsApp", "Source", "Date", "Actions"].map(h => <th key={h} className="px-5 py-3 font-semibold text-plum">{h}</th>)}</tr>
             </thead>
             <tbody>
               {data.map(l => (
@@ -643,7 +648,7 @@ function QuotesTab({ data, onDelete }: { data: QuoteItem[]; onDelete: (id: numbe
         <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
           <table className="w-full min-w-[1150px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40">
-              <tr>{["Name","Email","Phone","City","Scope","BHK","Rooms","Package","WhatsApp","Date","Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
+              <tr>{["Name", "Email", "Phone", "City", "Scope", "BHK", "Rooms", "Package", "WhatsApp", "Date", "Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
             </thead>
             <tbody>
               {data.map(q => {
@@ -651,7 +656,7 @@ function QuotesTab({ data, onDelete }: { data: QuoteItem[]; onDelete: (id: numbe
                 try {
                   const parsed = JSON.parse(q.rooms);
                   roomsSummary = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
-                } catch {}
+                } catch { }
                 return (
                   <tr key={q.external_id} className="border-b border-border/50 hover:bg-muted/20">
                     <td className="px-4 py-3 font-medium">{q.name}</td>
@@ -786,7 +791,7 @@ function CalculationHistoryTab({ data, onDelete, onChange }: { data: PriceCalcul
         <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
           <table className="w-full min-w-[1200px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40">
-              <tr>{["Name","Email","Phone","City","Scope","BHK","Package","Home Type","Price","Date","Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
+              <tr>{["Name", "Email", "Phone", "City", "Scope", "BHK", "Package", "Home Type", "Price", "Date", "Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
             </thead>
             <tbody>
               {data.map(p => (
@@ -874,7 +879,14 @@ function CalculatorSettingsTab({
   onChange: (v: CalculatorSettings) => void;
 }) {
   const [basePrice, setBasePrice] = useState(String(data.base_price));
-  const [bhkMultipliers, setBhkMultipliers] = useState<Record<string, number>>(data.bhk_multipliers);
+  const [bhkMultipliers, setBhkMultipliers] = useState<Record<string, number>>(() => {
+    const normalized = Object.entries(data.bhk_multipliers).map(([key, value]) => {
+      // Backward compatibility: convert old multiplier values to approximate sqft.
+      const sqftValue = value > 0 && value <= 10 ? Math.round(value * 1000) : Math.round(value);
+      return [key, sqftValue];
+    });
+    return Object.fromEntries(normalized);
+  });
   const [roomPrices, setRoomPrices] = useState<Record<string, number>>(data.room_prices);
   const [packageMultipliers, setPackageMultipliers] = useState<Record<string, number>>(
     data.package_multipliers,
@@ -882,6 +894,12 @@ function CalculatorSettingsTab({
   const [newHomeMultiplier, setNewHomeMultiplier] = useState(String(data.new_home_multiplier));
   const [renovationMultiplier, setRenovationMultiplier] = useState(
     String(data.renovation_multiplier),
+  );
+  const [villaDesignMultiplier, setVillaDesignMultiplier] = useState(
+    String(data.villa_design_multiplier),
+  );
+  const [officeDesignMultiplier, setOfficeDesignMultiplier] = useState(
+    String(data.office_design_multiplier),
   );
   const [saving, setSaving] = useState(false);
 
@@ -904,6 +922,8 @@ function CalculatorSettingsTab({
         package_multipliers: packageMultipliers,
         new_home_multiplier: Number(newHomeMultiplier),
         renovation_multiplier: Number(renovationMultiplier),
+        villa_design_multiplier: Number(villaDesignMultiplier),
+        office_design_multiplier: Number(officeDesignMultiplier),
       });
       onChange(updated);
       toast.success("Calculator prices updated");
@@ -931,7 +951,7 @@ function CalculatorSettingsTab({
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           <div>
-            <Label>Base Price (₹)</Label>
+            <Label>Base Rate (₹/sqft)</Label>
             <Input
               type="number"
               min={1}
@@ -939,6 +959,9 @@ function CalculatorSettingsTab({
               onChange={(e) => setBasePrice(e.target.value)}
               required
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              This rate is multiplied by fixed BHK area (sqft) for customer estimates.
+            </p>
           </div>
           <div>
             <Label>New Home Multiplier</Label>
@@ -962,19 +985,40 @@ function CalculatorSettingsTab({
               required
             />
           </div>
+          <div>
+            <Label>Villa Design Multiplier</Label>
+            <Input
+              type="number"
+              min={0.1}
+              step={0.01}
+              value={villaDesignMultiplier}
+              onChange={(e) => setVillaDesignMultiplier(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label>Office Design Multiplier</Label>
+            <Input
+              type="number"
+              min={0.1}
+              step={0.01}
+              value={officeDesignMultiplier}
+              onChange={(e) => setOfficeDesignMultiplier(e.target.value)}
+              required
+            />
+          </div>
         </div>
       </div>
 
       <EditableNumberGrid
-        title="Room Prices"
-        suffix="₹"
+        title="Room Prices (per sqft)"
+        suffix="₹/sqft"
         values={roomPrices}
         onChange={(key, value) => updateMap(setRoomPrices, key, value)}
       />
       <EditableNumberGrid
-        title="BHK Multipliers"
-        suffix="x"
-        step={0.01}
+        title="Fixed BHK Area (sqft)"
+        suffix="sqft"
         values={bhkMultipliers}
         onChange={(key, value) => updateMap(setBhkMultipliers, key, value)}
       />
@@ -1289,6 +1333,66 @@ function OffersTab({ data, onChange }: { data: OfferItem[]; onChange: (v: OfferI
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function ReviewsTab({ data, onDelete }: { data: ReviewEntry[]; onDelete: (id: string) => void; onChange: (data: ReviewEntry[]) => void }) {
+  if (data.length === 0) return <p className="p-8 text-center text-muted-foreground">No reviews submitted yet.</p>;
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this review?")) return;
+    try {
+      await deleteAdminReview(id);
+      toast.success("Review deleted");
+      onDelete(id);
+    } catch {
+      toast.error("Failed to delete review");
+    }
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
+      <table className="w-full min-w-[1000px] text-left text-sm">
+        <thead className="border-b border-border bg-muted/40">
+          <tr>
+            {[
+              "Name",
+              "City",
+              "Service",
+              "Rating",
+              "Title",
+              "Review",
+              "Date",
+              "Actions",
+            ].map((header) => (
+              <th key={header} className="px-4 py-3 font-semibold text-plum">{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((review) => (
+            <tr key={review.id} className="border-b border-border/50 hover:bg-muted/20">
+              <td className="px-4 py-3 font-medium">{review.name}</td>
+              <td className="px-4 py-3 text-muted-foreground">{review.city}</td>
+              <td className="px-4 py-3 text-xs text-muted-foreground">{review.service}</td>
+              <td className="px-4 py-3">
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
+                  {review.rating} stars
+                </span>
+              </td>
+              <td className="px-4 py-3 text-xs text-muted-foreground">{review.title || "—"}</td>
+              <td className="px-4 py-3 text-xs text-muted-foreground max-w-[320px] whitespace-pre-wrap break-words">{review.review}</td>
+              <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(review.created_at).toLocaleDateString()}</td>
+              <td className="px-4 py-3">
+                <button onClick={() => handleDelete(review.id)} className="text-red-600 hover:text-red-700" title="Delete">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

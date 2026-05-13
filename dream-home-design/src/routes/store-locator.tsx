@@ -18,11 +18,14 @@ const STORE = {
     "ATS Happy Trails GH02A grow+ market shop no 108 west vaidpura greater noida Uttar Pradesh 203207",
   coordinates: "28.5674550, 77.4767960",
   phone: "+91 9557930504",
+  phone_secondary: "+91 9997700405",
   email: "nextlivingspacespvtitd@gmail.com",
+  email_secondary: "contact@nextgenlivingspace.in",
   hours: "Monday to Saturday · 10 AM – 8 PM",
 };
-
-const mapSrc = "https://www.google.com/maps?q=28.5674550,77.4767960&z=17&output=embed";
+const mapSrc = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+  STORE.address,
+)}&z=17&output=embed`;
 
 function StoreLocator() {
   return (
@@ -56,23 +59,25 @@ function StoreLocator() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-primary" />
-                <a href={`tel:${STORE.phone.replace(/\s+/g, "")}`} className="font-medium text-plum hover:text-primary">
-                  {STORE.phone}
-                </a>
+                <div className="flex flex-col">
+                  <a href={`tel:${STORE.phone.replace(/\s+/g, "")}`} className="font-medium text-plum hover:text-primary">
+                    {STORE.phone}
+                  </a>
+                  <a href={`tel:${STORE.phone_secondary.replace(/\s+/g, "")}`} className="mt-1 text-sm text-foreground/85 hover:text-primary">
+                    {STORE.phone_secondary}
+                  </a>
+                </div>
               </li>
               <li className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-primary" />
                 <span>{STORE.hours}</span>
               </li>
             </ul>
-
-            <div className="mt-6 rounded-2xl bg-muted/45 px-4 py-3 text-sm text-muted-foreground">
-              Coordinates: <span className="font-medium text-plum">{STORE.coordinates}</span>
-            </div>
-
             <div className="mt-6 flex flex-wrap gap-3">
               <a
-                href="https://www.google.com/maps/search/?api=1&query=28.5674550,77.4767960"
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  STORE.address,
+                )}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -83,7 +88,13 @@ function StoreLocator() {
                 href={`mailto:${STORE.email}`}
                 className="inline-flex h-11 items-center justify-center rounded-full border border-input bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
               >
-                Email us
+                {STORE.email}
+              </a>
+              <a
+                href={`mailto:${STORE.email_secondary}`}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-input bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                {STORE.email_secondary}
               </a>
             </div>
           </div>

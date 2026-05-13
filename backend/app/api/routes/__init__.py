@@ -12,6 +12,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.leads import router as leads_router
 from app.api.routes.price_calculations import router as price_calculations_router
 from app.api.routes.public import router as public_router
+from app.api.routes.reviews import router as reviews_router
 from app.api.routes.quotes import router as quotes_router
 from app.api.routes.user_dashboard import router as user_dashboard_router
 from app.api.routes.webhooks import router as webhooks_router
@@ -28,6 +29,7 @@ api_router.include_router(admin_blogs_router)
 api_router.include_router(admin_images_router)
 api_router.include_router(admin_offers_router)
 api_router.include_router(quotes_router)
+api_router.include_router(reviews_router)
 api_router.include_router(price_calculations_router)
 api_router.include_router(user_dashboard_router)
 api_router.include_router(public_router)

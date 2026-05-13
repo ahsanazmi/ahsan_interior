@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, type UserConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 
 export default defineConfig(({ command, mode }) => {
   const loadedEnv = loadEnv(mode, process.cwd(), "VITE_");
@@ -35,6 +36,7 @@ export default defineConfig(({ command, mode }) => {
       chunkSizeWarningLimit: 1000,
     },
     plugins: [
+      TanStackRouterVite(),
       tailwindcss(),
       tsConfigPaths({ projects: ["./tsconfig.json"] }),
       react(),

@@ -52,8 +52,8 @@ def get_db() -> Generator[Session, None, None]:
 
 def ensure_compatibility_schema() -> None:
     """Apply lightweight schema fixes needed by newer app versions.
-    
-    This ensures the leads table has query_type and message columns.
+
+    This ensures required columns exist for backward-compatible deployments.
     Runs synchronously at startup to ensure columns exist before first request.
     """
     import logging
@@ -61,46 +61,83 @@ def ensure_compatibility_schema() -> None:
     
     try:
         inspector = inspect(engine)
-        if not inspector.has_table("leads"):
-            logger.info("leads table does not exist yet; will be created by init_db")
-            return
 
-        # Check if columns already exist
-        columns = {col['name'] for col in inspector.get_columns("leads")}
-        needs_query_type = 'query_type' not in columns
-        needs_message = 'message' not in columns
-        
-        if not (needs_query_type or needs_message):
-            logger.info("leads table already has query_type and message columns")
-            return
-        
-        logger.info(f"Adding missing columns to leads table: query_type={needs_query_type}, message={needs_message}")
-        
         with engine.begin() as connection:
-            if needs_query_type:
-                logger.debug("Adding query_type column...")
-                connection.execute(
-                    text(
-                        """
-                        ALTER TABLE leads
-                        ADD COLUMN IF NOT EXISTS query_type VARCHAR(120) NOT NULL DEFAULT 'General query'
-                        """
+            if inspector.has_table("leads"):
+                lead_columns = {col["name"] for col in inspector.get_columns("leads")}
+                needs_query_type = "query_type" not in lead_columns
+                needs_message = "message" not in lead_columns
+
+                if needs_query_type:
+                    logger.debug("Adding leads.query_type column...")
+                    connection.execute(
+                        text(
+                            """
+                            ALTER TABLE leads
+                            ADD COLUMN IF NOT EXISTS query_type VARCHAR(120) NOT NULL DEFAULT 'General query'
+                            """
+                        )
                     )
-                )
-                logger.debug("query_type column added successfully")
-                
-            if needs_message:
-                logger.debug("Adding message column...")
-                connection.execute(
-                    text(
-                        """
-                        ALTER TABLE leads
-                        ADD COLUMN IF NOT EXISTS message VARCHAR(2000) NULL
-                        """
+
+                if needs_message:
+                    logger.debug("Adding leads.message column...")
+                    connection.execute(
+                        text(
+                            """
+                            ALTER TABLE leads
+                            ADD COLUMN IF NOT EXISTS message VARCHAR(2000) NULL
+                            """
+                        )
                     )
-                )
-                logger.debug("message column added successfully")
-        
+            else:
+                logger.info("leads table does not exist yet; will be created by init_db")
+
+            if inspector.has_table("calculator_settings"):
+                calculator_columns = {col["name"] for col in inspector.get_columns("calculator_settings")}
+                needs_villa_multiplier = "villa_design_multiplier" not in calculator_columns
+                needs_office_multiplier = "office_design_multiplier" not in calculator_columns
+
+                if needs_villa_multiplier:
+                    logger.debug("Adding calculator_settings.villa_design_multiplier column...")
+                    connection.execute(
+                        text(
+                            """
+                            ALTER TABLE calculator_settings
+                            ADD COLUMN IF NOT EXISTS villa_design_multiplier FLOAT NOT NULL DEFAULT 1.25
+                            """
+                        )
+                    )
+
+                if needs_office_multiplier:
+                    logger.debug("Adding calculator_settings.office_design_multiplier column...")
+                    connection.execute(
+                        text(
+                            """
+                            ALTER TABLE calculator_settings
+                            ADD COLUMN IF NOT EXISTS office_design_multiplier FLOAT NOT NULL DEFAULT 1.2
+                            """
+                        )
+                    )
+            else:
+                logger.info("calculator_settings table does not exist yet; will be created by init_db")
+
+            if inspector.has_table("reviews"):
+                review_columns = {col["name"] for col in inspector.get_columns("reviews")}
+                needs_review_image_url = "review_image_url" not in review_columns
+
+                if needs_review_image_url:
+                    logger.debug("Adding reviews.review_image_url column...")
+                    connection.execute(
+                        text(
+                            """
+                            ALTER TABLE reviews
+                            ADD COLUMN IF NOT EXISTS review_image_url VARCHAR(500) NULL
+                            """
+                        )
+                    )
+            else:
+                logger.info("reviews table does not exist yet; will be created by init_db")
+
         logger.info("Schema compatibility check completed successfully")
     except Exception as e:
         logger.error(f"Failed to ensure schema compatibility: {e}", exc_info=True)
@@ -119,6 +156,7 @@ def init_db() -> None:
         offer,
         price_calculation,
         quote,
+        review,
         user,
     )
 

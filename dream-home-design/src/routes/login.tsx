@@ -1,7 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { User, ShieldCheck } from "lucide-react";
+import { User, ShieldCheck, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,12 @@ export const Route = createFileRoute("/login")({
   component: Login,
   head: () => ({
     meta: [
-      { title: "Sign in — NextGen Living Space Private Limited" },
-      { name: "description", content: "Sign in to your NextGen Living Space account." },
+      { title: "User Portal — Sign in or Register — NextGen Living Space" },
+      {
+        name: "description",
+        content:
+          "Sign in to your NextGen Living Space user portal to manage your interior design projects, bookings, quotes and reviews.",
+      },
     ],
   }),
 });
@@ -70,7 +74,35 @@ function Login() {
   const isRegister = mode === "register";
 
   return (
-    <section className="container-page flex items-center justify-center py-10 md:py-16">
+    <>
+      {/* Breadcrumb */}
+      <section className="border-b border-border/70 bg-white/70">
+        <div className="container-page py-3 text-xs text-muted-foreground">
+          <span className="font-semibold text-primary">Home</span> / User Portal
+        </div>
+      </section>
+
+      {/* Portal Hero */}
+      <section className="bg-gradient-to-b from-primary/5 to-transparent border-b border-border/70">
+        <div className="container-page py-8 md:py-12">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">
+              User Portal
+            </p>
+            <h1 className="mt-3 font-display text-3xl md:text-4xl text-plum">
+              {role === "admin" ? "Admin Control Center" : "Your Design Workspace"}
+            </h1>
+            <p className="mt-3 text-muted-foreground">
+              {role === "admin"
+                ? "Access admin tools to manage the platform."
+                : "Sign in or create an account to manage your interior design projects, track appointments, and share reviews."}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Login Form Section */}
+      <section className="container-page flex items-center justify-center py-14 md:py-20">
       <div className="grid w-full overflow-hidden rounded-[2rem] border border-border/70 bg-white/90 shadow-elegant lg:grid-cols-[0.95fr_1.05fr]">
         {/* Left panel */}
         <div className="bg-[linear-gradient(135deg,rgba(18,24,44,0.96),rgba(35,47,77,0.92))] p-8 text-white md:p-12">
@@ -242,6 +274,7 @@ function Login() {
           )}
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 }

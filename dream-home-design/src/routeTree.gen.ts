@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StoreLocatorRouteImport } from './routes/store-locator'
+import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PriceCalculatorRouteImport } from './routes/price-calculator'
 import { Route as MagazineRouteImport } from './routes/magazine'
@@ -18,10 +19,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HireADesignerRouteImport } from './routes/hire-a-designer'
 import { Route as DesignIdeasRouteImport } from './routes/design-ideas'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ContactUsRouteImport } from './routes/contact-us'
 import { Route as CitiesRouteImport } from './routes/cities'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
-import { Route as ContactUsRouteImport } from './routes/contact-us'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MagazineIndexRouteImport } from './routes/magazine/index'
 import { Route as DesignIdeasIndexRouteImport } from './routes/design-ideas/index'
@@ -78,6 +79,11 @@ const StoreLocatorRoute = StoreLocatorRouteImport.update({
   path: '/store-locator',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -118,6 +124,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactUsRoute = ContactUsRouteImport.update({
+  id: '/contact-us',
+  path: '/contact-us',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CitiesRoute = CitiesRouteImport.update({
   id: '/cities',
   path: '/cities',
@@ -131,11 +142,6 @@ const AdminRoute = AdminRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactUsRoute = ContactUsRouteImport.update({
-  id: '/contact-us',
-  path: '/contact-us',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -420,9 +426,9 @@ const MagazineBlogSlugRoute = MagazineBlogSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/contact-us': typeof ContactUsRoute
   '/admin': typeof AdminRoute
   '/cities': typeof CitiesRouteWithChildren
+  '/contact-us': typeof ContactUsRoute
   '/dashboard': typeof DashboardRoute
   '/design-ideas': typeof DesignIdeasRouteWithChildren
   '/hire-a-designer': typeof HireADesignerRoute
@@ -431,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/magazine': typeof MagazineRouteWithChildren
   '/price-calculator': typeof PriceCalculatorRoute
   '/projects': typeof ProjectsRoute
+  '/reviews': typeof ReviewsRoute
   '/store-locator': typeof StoreLocatorRoute
   '/cities/$city': typeof CitiesCityRoute
   '/design-ideas/$slug': typeof DesignIdeasSlugRoute
@@ -486,12 +493,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/contact-us': typeof ContactUsRoute
   '/dashboard': typeof DashboardRoute
   '/hire-a-designer': typeof HireADesignerRoute
   '/login': typeof LoginRoute
   '/luxury-interiors': typeof LuxuryInteriorsRoute
   '/price-calculator': typeof PriceCalculatorRoute
   '/projects': typeof ProjectsRoute
+  '/reviews': typeof ReviewsRoute
   '/store-locator': typeof StoreLocatorRoute
   '/cities/$city': typeof CitiesCityRoute
   '/design-ideas/$slug': typeof DesignIdeasSlugRoute
@@ -549,6 +558,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/cities': typeof CitiesRouteWithChildren
+  '/contact-us': typeof ContactUsRoute
   '/dashboard': typeof DashboardRoute
   '/design-ideas': typeof DesignIdeasRouteWithChildren
   '/hire-a-designer': typeof HireADesignerRoute
@@ -557,6 +567,7 @@ export interface FileRoutesById {
   '/magazine': typeof MagazineRouteWithChildren
   '/price-calculator': typeof PriceCalculatorRoute
   '/projects': typeof ProjectsRoute
+  '/reviews': typeof ReviewsRoute
   '/store-locator': typeof StoreLocatorRoute
   '/cities/$city': typeof CitiesCityRoute
   '/design-ideas/$slug': typeof DesignIdeasSlugRoute
@@ -613,9 +624,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
-    | '/contact-us'
     | '/admin'
     | '/cities'
+    | '/contact-us'
     | '/dashboard'
     | '/design-ideas'
     | '/hire-a-designer'
@@ -624,6 +635,7 @@ export interface FileRouteTypes {
     | '/magazine'
     | '/price-calculator'
     | '/projects'
+    | '/reviews'
     | '/store-locator'
     | '/cities/$city'
     | '/design-ideas/$slug'
@@ -678,14 +690,15 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
-    | '/contact-us'
     | '/admin'
+    | '/contact-us'
     | '/dashboard'
     | '/hire-a-designer'
     | '/login'
     | '/luxury-interiors'
     | '/price-calculator'
     | '/projects'
+    | '/reviews'
     | '/store-locator'
     | '/cities/$city'
     | '/design-ideas/$slug'
@@ -740,9 +753,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
-    | '/contact-us'
     | '/admin'
     | '/cities'
+    | '/contact-us'
     | '/dashboard'
     | '/design-ideas'
     | '/hire-a-designer'
@@ -751,6 +764,7 @@ export interface FileRouteTypes {
     | '/magazine'
     | '/price-calculator'
     | '/projects'
+    | '/reviews'
     | '/store-locator'
     | '/cities/$city'
     | '/design-ideas/$slug'
@@ -808,6 +822,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
   CitiesRoute: typeof CitiesRouteWithChildren
+  ContactUsRoute: typeof ContactUsRoute
   DashboardRoute: typeof DashboardRoute
   DesignIdeasRoute: typeof DesignIdeasRouteWithChildren
   HireADesignerRoute: typeof HireADesignerRoute
@@ -816,6 +831,7 @@ export interface RootRouteChildren {
   MagazineRoute: typeof MagazineRouteWithChildren
   PriceCalculatorRoute: typeof PriceCalculatorRoute
   ProjectsRoute: typeof ProjectsRoute
+  ReviewsRoute: typeof ReviewsRoute
   StoreLocatorRoute: typeof StoreLocatorRoute
 }
 
@@ -826,6 +842,13 @@ declare module '@tanstack/react-router' {
       path: '/store-locator'
       fullPath: '/store-locator'
       preLoaderRoute: typeof StoreLocatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects': {
@@ -884,6 +907,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contact-us': {
+      id: '/contact-us'
+      path: '/contact-us'
+      fullPath: '/contact-us'
+      preLoaderRoute: typeof ContactUsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cities': {
       id: '/cities'
       path: '/cities'
@@ -896,13 +926,6 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact-us': {
-      id: '/contact-us'
-      path: '/contact-us'
-      fullPath: '/contact-us'
-      preLoaderRoute: typeof ContactUsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -1396,8 +1419,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
-  ContactUsRoute: ContactUsRoute,
   CitiesRoute: CitiesRouteWithChildren,
+  ContactUsRoute: ContactUsRoute,
   DashboardRoute: DashboardRoute,
   DesignIdeasRoute: DesignIdeasRouteWithChildren,
   HireADesignerRoute: HireADesignerRoute,
@@ -1406,17 +1429,9 @@ const rootRouteChildren: RootRouteChildren = {
   MagazineRoute: MagazineRouteWithChildren,
   PriceCalculatorRoute: PriceCalculatorRoute,
   ProjectsRoute: ProjectsRoute,
+  ReviewsRoute: ReviewsRoute,
   StoreLocatorRoute: StoreLocatorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

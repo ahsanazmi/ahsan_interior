@@ -61,11 +61,12 @@ export type AppointmentResponse = {
 
 async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response;
+  const isFormData = typeof FormData !== "undefined" && options?.body instanceof FormData;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(options?.headers ?? {}),
       },
     });
@@ -128,6 +129,66 @@ export function submitQuote(payload: QuotePayload) {
   });
 }
 
+/* ── Reviews ── */
+
+export type ReviewPayload = {
+  name: string;
+  city: string;
+  service: string;
+  rating: number;
+  title?: string | null;
+  review: string;
+  source?: string;
+  review_image?: File | null;
+};
+
+export type ReviewEntry = {
+  id: string;
+  name: string;
+  city: string;
+  service: string;
+  rating: number;
+  title: string | null;
+  review: string;
+  review_image_url?: string | null;
+  created_at: string;
+};
+
+export type ReviewResponse = {
+  id: string;
+  message: string;
+  created_at: string;
+  review: ReviewEntry;
+};
+
+export function fetchReviews(limit = 6) {
+  return requestJson<ReviewEntry[]>(`/reviews?limit=${limit}`);
+}
+
+export function submitReview(payload: ReviewPayload) {
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  formData.append("city", payload.city);
+  formData.append("service", payload.service);
+  formData.append("rating", String(payload.rating));
+  formData.append("review", payload.review);
+
+  if (payload.title) {
+    formData.append("title", payload.title);
+  }
+  if (payload.source) {
+    formData.append("source", payload.source);
+  }
+  if (payload.review_image) {
+    formData.append("review_image", payload.review_image);
+  }
+
+  return requestJson<ReviewResponse>("/reviews", {
+    method: "POST",
+    body: formData,
+  });
+}
+
 /* ── Calculator Settings ── */
 
 export type CalculatorSettings = {
@@ -138,6 +199,8 @@ export type CalculatorSettings = {
   package_multipliers: Record<string, number>;
   new_home_multiplier: number;
   renovation_multiplier: number;
+  villa_design_multiplier: number;
+  office_design_multiplier: number;
   updated_at: string;
 };
 
@@ -280,6 +343,10 @@ export function updateMyBooking(bookingId: number, payload: AppointmentPayload) 
 
 export function fetchMyQuotes() {
   return requestJson<QuoteItem[]>("/user/quotes", { headers: authHeaders() });
+}
+
+export function fetchMyReviews() {
+  return requestJson<ReviewEntry[]>("/user/reviews", { headers: authHeaders() });
 }
 
 export async function deleteMyQuote(quoteId: number) {
@@ -443,7 +510,7 @@ export function searchAdminAppointments(search?: string, status?: string, city?:
   if (search) params.append("search", search);
   if (status) params.append("status", status);
   if (city) params.append("city", city);
-  
+
   const query = params.toString() ? `?${params.toString()}` : "";
   return requestJson<BookingItem[]>(`/admin/appointments${query}`, { headers: authHeaders() });
 }
@@ -452,11 +519,11 @@ export async function exportAppointmentsCSV() {
   const response = await fetch(`${API_BASE_URL}/admin/appointments/export/csv`, {
     headers: authHeaders(),
   });
-  
+
   if (!response.ok) throw new Error("Failed to export appointments");
-  
+
   const data = await response.json();
-  
+
   // Create CSV download
   const blob = new Blob([data.content], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
@@ -506,6 +573,10 @@ export function fetchAdminQuotes() {
   return requestJson<QuoteItem[]>("/admin/quotes", { headers: authHeaders() });
 }
 
+export function fetchAdminReviews() {
+  return requestJson<ReviewEntry[]>("/admin/reviews", { headers: authHeaders() });
+}
+
 export function fetchAdminPriceCalculations() {
   return requestJson<PriceCalculationItem[]>("/admin/price-calculations", { headers: authHeaders() });
 }
@@ -523,6 +594,14 @@ export function updateAdminPriceCalculation(calculationId: number, payload: Reco
     method: "PUT",
     body: JSON.stringify(payload),
     headers: authHeaders(),
+  });
+}
+
+export async function deleteAdminReview(reviewId: string) {
+  const token = localStorage.getItem("token");
+  await fetch(`${API_BASE_URL}/admin/reviews/${reviewId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 

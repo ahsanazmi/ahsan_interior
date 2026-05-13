@@ -56,10 +56,22 @@ const contactInfo = [
     href: "tel:+919557930504",
   },
   {
+    icon: Phone,
+    title: "Call us",
+    value: "+91 9997700405",
+    href: "tel:+919997700405",
+  },
+  {
     icon: Mail,
     title: "Email",
     value: "nextlivingspacespvtitd@gmail.com",
     href: "mailto:nextlivingspacespvtitd@gmail.com",
+  },
+  {
+    icon: Mail,
+    title: "Email",
+    value: "contact@nextgenlivingspace.in",
+    href: "mailto:contact@nextgenlivingspace.in",
   },
   {
     icon: Clock3,
@@ -72,7 +84,7 @@ const contactInfo = [
 const locationAddress =
   "ATS Happy Trails GH02A, Grow+ Market Shop No. 108, West Vaidpura, Greater Noida, Uttar Pradesh 203207";
 const mapSrc =
-  "https://www.google.com/maps?q=28.5674550,77.4767960&z=17&output=embed";
+  "https://www.google.com/maps?q=ATS%20Happy%20Trails%20GH02A%20Grow%2B%20Market%20Shop%20No.%20108%20West%20Vaidpura%20Greater%20Noida%20Uttar%20Pradesh%20203207&z=17&output=embed";
 
 function ContactUsPage() {
   const [name, setName] = useState("");
@@ -176,7 +188,7 @@ function ContactUsPage() {
                     <p className="mt-4 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                       {item.title}
                     </p>
-                    <p className="mt-2 text-sm font-medium text-plum">{item.value}</p>
+                    <p className="mt-2 text-sm font-medium text-plum break-words whitespace-normal">{item.value}</p>
                   </div>
                 );
 
@@ -200,9 +212,7 @@ function ContactUsPage() {
                     Address
                   </p>
                   <p className="mt-2 text-base font-medium text-plum">{locationAddress}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Coordinates: 28.5674550, 77.4767960
-                  </p>
+                  
                 </div>
               </div>
             </div>
