@@ -789,29 +789,56 @@ function CalculationHistoryTab({ data, onDelete, onChange }: { data: PriceCalcul
         />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-soft">
-          <table className="w-full min-w-[1200px] text-left text-sm">
+          <table className="w-full min-w-[1400px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40">
-              <tr>{["Name", "Email", "Phone", "City", "Scope", "BHK", "Package", "Home Type", "Price", "Date", "Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
+              <tr>{["Name", "Email", "Phone", "City", "Scope", "BHK", "Room Details", "Package", "Home Type", "Price", "Date", "Actions"].map(h => <th key={h} className="px-4 py-3 font-semibold text-plum">{h}</th>)}</tr>
             </thead>
             <tbody>
-              {data.map(p => (
-                <tr key={p.external_id} className="border-b border-border/50 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium">{p.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.email}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.phone}</td>
-                  <td className="px-4 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{p.city}</td>
-                  <td className="px-4 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{p.scope}</span></td>
-                  <td className="px-4 py-3 font-semibold">{p.bhk}</td>
-                  <td className="px-4 py-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">{p.package}</span></td>
-                  <td className="px-4 py-3"><span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-700">{p.home_type}</span></td>
-                  <td className="px-4 py-3 font-semibold text-green-600">₹{p.total_price?.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <button onClick={() => handleEdit(p)} className="text-blue-600 hover:text-blue-700" title="Edit"><Edit2 className="h-4 w-4" /></button>
-                    <button onClick={() => handleDelete(p.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
-                  </td>
-                </tr>
-              ))}
+              {data.map(p => {
+                let roomDetails = "—";
+                try {
+                  const parsed = JSON.parse(p.rooms);
+                  if (parsed.room_details && typeof parsed.room_details === 'object') {
+                    const roomBreakdown: string[] = [];
+                    for (const [room, detail] of Object.entries(parsed.room_details)) {
+                      if (detail && typeof detail === 'object' && 'quantity' in detail && 'sqft' in detail) {
+                        const d = detail as { quantity: number; sqft: number[] };
+                        const sqftStr = d.sqft.map((s: number) => `${s} sq ft`).join(", ");
+                        roomBreakdown.push(`${room} (${d.quantity}x): ${sqftStr}`);
+                      } else if (typeof detail === 'number') {
+                        // Fallback for old format
+                        roomBreakdown.push(`${room}: ${detail} sq ft`);
+                      }
+                    }
+                    roomDetails = roomBreakdown.length > 0 ? roomBreakdown.join(" | ") : `Total: ${parsed.total_sqft || parsed.fixed_sqft} sq ft`;
+                  } else if (parsed.total_sqft) {
+                    roomDetails = `Total: ${parsed.total_sqft} sq ft`;
+                  } else if (parsed.fixed_sqft) {
+                    roomDetails = `Area: ${parsed.fixed_sqft} sq ft`;
+                  }
+                } catch (e) {
+                  roomDetails = p.rooms;
+                }
+                return (
+                  <tr key={p.external_id} className="border-b border-border/50 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium">{p.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{p.email}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{p.phone}</td>
+                    <td className="px-4 py-3"><MapPin className="mr-1 inline h-3 w-3 text-primary" />{p.city}</td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">{p.scope}</span></td>
+                    <td className="px-4 py-3 font-semibold">{p.bhk}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate" title={roomDetails}>{roomDetails}</td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-700">{p.package}</span></td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-700">{p.home_type}</span></td>
+                    <td className="px-4 py-3 font-semibold text-green-600">₹{p.total_price?.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 flex gap-2">
+                      <button onClick={() => handleEdit(p)} className="text-blue-600 hover:text-blue-700" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleDelete(p.id)} className="text-red-600 hover:text-red-700" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -821,6 +848,57 @@ function CalculationHistoryTab({ data, onDelete, onChange }: { data: PriceCalcul
 }
 
 function EditCalculationForm({ calculation, onSave, onCancel, onChange, data }: any) {
+  const [roomDetails, setRoomDetails] = useState<Record<string, { quantity: number; sqft: number[] }>>({});
+  
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(data.rooms || "{}");
+      if (parsed.room_details && typeof parsed.room_details === 'object') {
+        // Check if it's the new format with quantity and sqft array
+        const firstRoom = Object.values(parsed.room_details)[0];
+        if (firstRoom && typeof firstRoom === 'object' && 'quantity' in firstRoom && 'sqft' in firstRoom) {
+          setRoomDetails(parsed.room_details);
+        } else {
+          // Old format - convert it
+          const converted: Record<string, { quantity: number; sqft: number[] }> = {};
+          for (const [room, sqft] of Object.entries(parsed.room_details)) {
+            if (typeof sqft === 'number') {
+              converted[room] = { quantity: 1, sqft: [sqft] };
+            }
+          }
+          setRoomDetails(converted);
+        }
+      }
+    } catch (e) {
+      setRoomDetails({});
+    }
+  }, [data.rooms]);
+
+  const handleRoomSqftChange = (room: string, index: number, value: number) => {
+    const updated = { ...roomDetails };
+    if (updated[room]) {
+      const sqftArray = [...updated[room].sqft];
+      sqftArray[index] = value;
+      updated[room] = { ...updated[room], sqft: sqftArray };
+      setRoomDetails(updated);
+      
+      // Calculate total and update
+      const totalSqft = Object.values(updated).reduce((sum, detail) => {
+        return sum + (detail.sqft ? detail.sqft.reduce((s, v) => s + (v || 0), 0) : 0);
+      }, 0);
+      
+      onChange({
+        ...data,
+        rooms: JSON.stringify({
+          fixed_sqft: data.fixed_sqft || 0,
+          total_sqft: totalSqft,
+          selected_rooms: Object.fromEntries(Object.entries(updated).map(([room, detail]) => [room, detail.quantity])),
+          room_details: updated
+        })
+      });
+    }
+  };
+
   return (
     <div className="rounded-2xl border border-border bg-white shadow-soft p-6">
       <h3 className="text-lg font-semibold text-plum mb-4">Edit Calculation</h3>
@@ -860,6 +938,36 @@ function EditCalculationForm({ calculation, onSave, onCancel, onChange, data }: 
         <div>
           <Label>Total Price (₹)</Label>
           <Input type="number" value={data.total_price} onChange={(e) => onChange({ ...data, total_price: parseFloat(e.target.value) })} />
+        </div>
+        <div className="md:col-span-2">
+          <Label className="mb-3 block">Room Details</Label>
+          <div className="space-y-4">
+            {Object.entries(roomDetails).map(([room, detail]) => (
+              <div key={room} className="border border-border rounded-lg p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-semibold text-sm text-plum">{room}</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Qty: {detail.quantity}</span>
+                </div>
+                <div className="grid gap-2 grid-cols-2 md:grid-cols-3">
+                  {detail.sqft.map((sqft, idx) => (
+                    <div key={`${room}-${idx}`}>
+                      <Label className="text-xs">{detail.quantity > 1 ? `Unit ${idx + 1}` : "Sq ft"}</Label>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={sqft || 0}
+                          onChange={(e) => handleRoomSqftChange(room, idx, e.target.value ? parseInt(e.target.value) : 0)}
+                          className="text-sm flex-1"
+                        />
+                        <span className="text-xs text-muted-foreground w-8">sq ft</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="md:col-span-2 flex gap-3">
           <Button onClick={onSave} className="rounded-full">Save</Button>
@@ -960,7 +1068,7 @@ function CalculatorSettingsTab({
               required
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              This rate is multiplied by fixed BHK area (sqft) for customer estimates.
+              This rate is used with the room-level estimate shown on the public calculator.
             </p>
           </div>
           <div>
@@ -1015,12 +1123,6 @@ function CalculatorSettingsTab({
         suffix="₹/sqft"
         values={roomPrices}
         onChange={(key, value) => updateMap(setRoomPrices, key, value)}
-      />
-      <EditableNumberGrid
-        title="Fixed BHK Area (sqft)"
-        suffix="sqft"
-        values={bhkMultipliers}
-        onChange={(key, value) => updateMap(setBhkMultipliers, key, value)}
       />
       <EditableNumberGrid
         title="Package Multipliers"

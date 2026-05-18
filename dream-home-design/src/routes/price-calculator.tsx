@@ -42,6 +42,8 @@ export const Route = createFileRoute("/price-calculator")({
 const STEP_LABELS = [
   "SCOPE OF WORK",
   "BHK TYPE",
+  "SELECT ROOMS",
+  "ROOM SQUARE FEET",
   "PACKAGE",
   "GET QUOTE",
 ] as const;
@@ -54,22 +56,46 @@ const SCOPE_OPTIONS = [
 const BHK_OPTIONS = ["1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK+"] as const;
 type PackageType = "Essentials" | "Premium" | "Luxe";
 
+// Room types with categories
+const ROOM_CATEGORIES: Record<string, { label: string; rooms: string[] }> = {
+  common: {
+    label: "Common Areas",
+    rooms: ["Living Room", "Kitchen", "Dining"]
+  },
+  bedrooms: {
+    label: "Bedrooms",
+    rooms: ["Bedroom"]
+  },
+  bathrooms: {
+    label: "Bathrooms",
+    rooms: ["Bathroom"]
+  }
+};
+
+const ROOM_TYPES_BY_BHK: Record<string, string[]> = {
+  "1 BHK": ["Living Room", "Kitchen", "Bedroom", "Bathroom"],
+  "2 BHK": ["Living Room", "Kitchen", "Bedroom", "Bathroom", "Dining"],
+  "3 BHK": ["Living Room", "Kitchen", "Bedroom", "Bathroom", "Dining"],
+  "4 BHK": ["Living Room", "Kitchen", "Bedroom", "Bathroom", "Dining"],
+  "5 BHK+": ["Living Room", "Kitchen", "Bedroom", "Bathroom", "Dining"],
+};
+
 const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   id: 0,
-  base_price: 1500,
+  base_price: 75000,
   bhk_multipliers: {
-    "1 BHK": 650,
-    "2 BHK": 950,
-    "3 BHK": 1300,
-    "4 BHK": 1700,
-    "5 BHK+": 2100,
+    "1 BHK": 1000,
+    "2 BHK": 1350,
+    "3 BHK": 1750,
+    "4 BHK": 2250,
+    "5 BHK+": 2800,
   },
   room_prices: {
-    "Living Room": 850,
-    Kitchen: 1400,
-    Bedroom: 900,
-    Bathroom: 550,
-    Dining: 650,
+    "Living Room": 85000,
+    Kitchen: 140000,
+    Bedroom: 90000,
+    Bathroom: 55000,
+    Dining: 65000,
   },
   package_multipliers: {
     Essentials: 1,
@@ -96,6 +122,8 @@ function PriceCalc() {
   const [step, setStep] = useState(0);
   const [scope, setScope] = useState("");
   const [bhk, setBhk] = useState<string>("");
+  const [selectedRooms, setSelectedRooms] = useState<Record<string, number>>({}); // room name -> quantity
+  const [roomSquareFeet, setRoomSquareFeet] = useState<Record<string, number>>({}); // "room-0", "room-1" -> sqft
   const [selectedPackage, setSelectedPackage] = useState<PackageType | "">("");
 
   const [name, setName] = useState("");
@@ -117,15 +145,29 @@ function PriceCalc() {
       });
   }, []);
 
-  const fixedSqft = useMemo(() => {
-    const raw = calculatorSettings.bhk_multipliers[bhk] ?? 0;
-    // Backward compatibility for old multiplier values (1.35 etc.)
-    return raw > 0 && raw <= 10 ? Math.round(raw * 1000) : Math.round(raw);
-  }, [bhk, calculatorSettings.bhk_multipliers]);
+
 
   const estimatedPrice = useMemo(() => {
-    const areaBasedTotal = (calculatorSettings.base_price ?? 0) * fixedSqft;
+    // Calculate total price based on room prices and actual user-entered square footage
+    let roomBasedTotal = 0;
+    
+    // Calculate price for each selected room
+    for (const [room, quantity] of Object.entries(selectedRooms)) {
+      if (quantity && quantity > 0) {
+        const roomPrice = (calculatorSettings.room_prices?.[room] ?? 0);
+        
+        // Sum sqft for all units of this room
+        let totalRoomSqft = 0;
+        for (let i = 0; i < quantity; i++) {
+          totalRoomSqft += roomSquareFeet[`${room}-${i}`] || 0;
+        }
+        
+        // Add this room's contribution to total
+        roomBasedTotal += roomPrice * totalRoomSqft;
+      }
+    }
 
+    // Apply package and scope multipliers
     const packageMultiplier = selectedPackage
       ? calculatorSettings.package_multipliers[selectedPackage] ?? 1
       : 1;
@@ -138,8 +180,9 @@ function PriceCalc() {
             ? calculatorSettings.office_design_multiplier
             : calculatorSettings.new_home_multiplier;
 
-    return Math.round((areaBasedTotal * packageMultiplier * scopeMultiplier) / 1000) * 1000;
-  }, [calculatorSettings.base_price, fixedSqft, scope, selectedPackage, calculatorSettings.package_multipliers, calculatorSettings.new_home_multiplier, calculatorSettings.renovation_multiplier, calculatorSettings.villa_design_multiplier, calculatorSettings.office_design_multiplier]);
+    // Return rounded to nearest 1000
+    return Math.round((roomBasedTotal * packageMultiplier * scopeMultiplier) / 1000) * 1000;
+  }, [calculatorSettings.room_prices, calculatorSettings.package_multipliers, calculatorSettings.new_home_multiplier, calculatorSettings.renovation_multiplier, calculatorSettings.villa_design_multiplier, calculatorSettings.office_design_multiplier, scope, selectedPackage, selectedRooms, roomSquareFeet]);
 
   function startFlow() {
     setStarted(true);
@@ -153,6 +196,8 @@ function PriceCalc() {
     setStep(0);
     setScope("");
     setBhk("");
+    setSelectedRooms({});
+    setRoomSquareFeet({});
     setSelectedPackage("");
     setName("");
     setEmail("");
@@ -175,7 +220,26 @@ function PriceCalc() {
   function canProceed() {
     if (step === 0) return scope.length > 0;
     if (step === 1) return bhk.length > 0;
-    if (step === 2) return selectedPackage.length > 0;
+    if (step === 2) {
+      // Validate that at least one room is selected
+      return Object.values(selectedRooms).some(qty => qty && qty > 0);
+    }
+    if (step === 3) {
+      // Validate that all selected rooms have square footage entered
+      let roomIndex = 0;
+      for (const [room, qty] of Object.entries(selectedRooms)) {
+        if (qty && qty > 0) {
+          for (let i = 0; i < qty; i++) {
+            const roomKey = `${room}-${i}`;
+            if (!roomSquareFeet[roomKey] || roomSquareFeet[roomKey] <= 0) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    }
+    if (step === 4) return selectedPackage.length > 0;
     return hasValidContactDetails();
   }
 
@@ -202,6 +266,21 @@ function PriceCalc() {
               ? "villa"
               : "office_design";
 
+      // Calculate total square feet from rooms
+      const totalRoomSqft = Object.values(roomSquareFeet).reduce((sum, val) => sum + (val || 0), 0);
+      
+      // Build room details with quantities and square footage
+      const roomDetails: Record<string, { quantity: number; sqft: number[] }> = {};
+      for (const [room, qty] of Object.entries(selectedRooms)) {
+        if (qty && qty > 0) {
+          const sqftArray: number[] = [];
+          for (let i = 0; i < qty; i++) {
+            sqftArray.push(roomSquareFeet[`${room}-${i}`] || 0);
+          }
+          roomDetails[room] = { quantity: qty, sqft: sqftArray };
+        }
+      }
+
       // Save calculation history
       await savePriceCalculation({
         name: name.trim(),
@@ -211,7 +290,11 @@ function PriceCalc() {
         whatsapp_updates: updatesOnWhatsapp,
         scope,
         bhk,
-        rooms: JSON.stringify({ fixed_sqft: fixedSqft }),
+        rooms: JSON.stringify({ 
+          total_sqft: totalRoomSqft,
+          selected_rooms: selectedRooms,
+          room_details: roomDetails
+        }),
         package: selectedPackage,
         home_type: homeType,
         total_price: estimatedPrice,
@@ -226,7 +309,11 @@ function PriceCalc() {
         whatsapp_updates: updatesOnWhatsapp,
         scope,
         bhk,
-        rooms: JSON.stringify({ fixed_sqft: fixedSqft }),
+        rooms: JSON.stringify({ 
+          total_sqft: totalRoomSqft,
+          selected_rooms: selectedRooms,
+          room_details: roomDetails
+        }),
         package: selectedPackage,
         home_type: homeType,
         total_price: estimatedPrice,
@@ -444,14 +531,13 @@ function PriceCalc() {
               <article>
                 <h3 className="font-semibold text-plum">BHK type</h3>
                 <p className="text-sm text-muted-foreground">
-                  We make assumptions based on the house configuration and work on requirements.
+                  We use it to suggest the right room options for your home.
                 </p>
               </article>
               <article>
                 <h3 className="font-semibold text-plum">Size of the house</h3>
                 <p className="text-sm text-muted-foreground">
-                  Based on area and BHK type, we estimate cost per square foot for interior
-                  services.
+                  Your estimate is built from the rooms you select and the square feet you enter.
                 </p>
               </article>
               <article>
@@ -532,7 +618,7 @@ function PriceCalc() {
               </div>
             ))}
           </div>
-          <div className="text-xl font-semibold text-plum">{step + 1}/4</div>
+          <div className="text-xl font-semibold text-plum">{step + 1}/6</div>
         </div>
       </div>
 
@@ -601,6 +687,113 @@ function PriceCalc() {
 
             {step === 2 && (
               <>
+                <h1 className="text-center font-display text-4xl text-plum">
+                  Select rooms you'd like us to design
+                </h1>
+                <p className="mt-3 text-center text-muted-foreground">
+                  Choose which rooms and how many of each you want designed
+                </p>
+                <div className="mx-auto mt-8 max-w-2xl space-y-6">
+                  {Object.entries(ROOM_CATEGORIES).map(([catKey, category]) => {
+                    // Filter rooms based on BHK selection
+                    let availableRooms = category.rooms.filter(room => 
+                      ROOM_TYPES_BY_BHK[bhk]?.some(r => r.includes(room.split(" ")[0]))
+                    );
+                    
+                    // For office design, exclude Kitchen and Dining
+                    if (scope === "Office design") {
+                      availableRooms = availableRooms.filter(room => !["Kitchen", "Dining"].includes(room));
+                    }
+                    
+                    if (availableRooms.length === 0) return null;
+                    
+                    return (
+                      <div key={catKey}>
+                        <h3 className="text-sm font-semibold text-plum mb-3">{category.label}</h3>
+                        <div className="space-y-3">
+                          {availableRooms.map((room) => (
+                            <div key={room} className="flex items-center justify-between rounded-lg border border-border p-4 bg-white">
+                              <span className="font-medium text-plum">{room}</span>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const current = selectedRooms[room] || 0;
+                                    if (current > 0) {
+                                      setSelectedRooms(prev => ({ ...prev, [room]: current - 1 }));
+                                    }
+                                  }}
+                                  className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 font-bold"
+                                >
+                                  −
+                                </button>
+                                <span className="w-8 text-center font-semibold text-lg">{selectedRooms[room] || 0}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const current = selectedRooms[room] || 0;
+                                    setSelectedRooms(prev => ({ ...prev, [room]: current + 1 }));
+                                  }}
+                                  className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary hover:bg-primary/30 font-bold"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <h1 className="text-center font-display text-4xl text-plum">
+                  Enter square feet for each room
+                </h1>
+                <p className="mt-3 text-center text-muted-foreground">
+                  Please provide the approximate square footage for your selected rooms
+                </p>
+                <div className="mx-auto mt-8 max-w-md space-y-5">
+                  {Object.entries(selectedRooms).map(([room, qty]) => {
+                    if (!qty || qty <= 0) return null;
+                    return (
+                      <div key={room} className="space-y-3 pb-4 border-b border-border/40">
+                        {Array.from({ length: qty }).map((_, idx) => (
+                          <div key={`${room}-${idx}`} className="space-y-2">
+                            <Label htmlFor={`room-${room}-${idx}`}>
+                              {room} {qty > 1 ? `${idx + 1}` : ""}
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                id={`room-${room}-${idx}`}
+                                type="number"
+                                min="0"
+                                max="5000"
+                                placeholder="Enter sq ft"
+                                value={roomSquareFeet[`${room}-${idx}`] ?? 0}
+                                onChange={(e) => {
+                                  const val = e.target.value ? parseInt(e.target.value) : 0;
+                                  setRoomSquareFeet(prev => ({ ...prev, [`${room}-${idx}`]: val }));
+                                }}
+                                className="flex-1"
+                              />
+                              <span className="text-sm text-muted-foreground w-10">sq ft</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {step === 4 && (
+              <>
                 <h1 className="text-center font-display text-4xl text-plum">Pick your package</h1>
                 <div className="mx-auto mt-8 max-w-md space-y-3">
                   {[
@@ -651,7 +844,7 @@ function PriceCalc() {
               </>
             )}
 
-            {step === 3 && (
+            {step === 5 && (
               <>
                 <h1 className="text-center font-display text-4xl text-plum">
                   Your estimate is almost ready
@@ -734,8 +927,9 @@ function PriceCalc() {
             <button
               type="button"
               onClick={onBack}
-              className={`text-sm font-semibold tracking-wide ${step === 0 ? "pointer-events-none text-muted-foreground/40" : "text-primary"
-                }`}
+              className={`text-sm font-semibold tracking-wide ${
+                step === 0 ? "pointer-events-none text-muted-foreground/40" : "text-primary"
+              }`}
             >
               BACK
             </button>
@@ -746,7 +940,10 @@ function PriceCalc() {
               disabled={!canProceed() || submitting}
             >
               {submitting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
               ) : step === STEP_LABELS.length - 1 ? (
                 "SUBMIT"
               ) : (
