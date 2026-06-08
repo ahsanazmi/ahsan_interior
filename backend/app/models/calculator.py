@@ -10,7 +10,7 @@ class CalculatorSettings(Base):
     __tablename__ = "calculator_settings"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    base_price: Mapped[float] = mapped_column(Float, nullable=False, default=75000)
+    base_price: Mapped[float] = mapped_column(Float, nullable=False, default=1500)
     bhk_multipliers: Mapped[str] = mapped_column(Text, nullable=False)
     room_prices: Mapped[str] = mapped_column(Text, nullable=False)
     package_multipliers: Mapped[str] = mapped_column(Text, nullable=False)

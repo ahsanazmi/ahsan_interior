@@ -82,20 +82,20 @@ const ROOM_TYPES_BY_BHK: Record<string, string[]> = {
 
 const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   id: 0,
-  base_price: 75000,
+  base_price: 1500,
   bhk_multipliers: {
-    "1 BHK": 1000,
-    "2 BHK": 1350,
-    "3 BHK": 1750,
-    "4 BHK": 2250,
-    "5 BHK+": 2800,
+    "1 BHK": 650,
+    "2 BHK": 950,
+    "3 BHK": 1300,
+    "4 BHK": 1700,
+    "5 BHK+": 2100,
   },
   room_prices: {
-    "Living Room": 85000,
-    Kitchen: 140000,
-    Bedroom: 90000,
-    Bathroom: 55000,
-    Dining: 65000,
+    "Living Room": 850,
+    Kitchen: 1400,
+    Bedroom: 900,
+    Bathroom: 550,
+    Dining: 650,
   },
   package_multipliers: {
     Essentials: 1,
@@ -115,6 +115,24 @@ function formatRupees(value: number) {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function normalizePerSqftRate(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return value >= 10000 ? Math.round(value / 100) : value;
+}
+
+function normalizeCalculatorSettings(settings: CalculatorSettings): CalculatorSettings {
+  return {
+    ...settings,
+    base_price: normalizePerSqftRate(settings.base_price),
+    room_prices: Object.fromEntries(
+      Object.entries(settings.room_prices).map(([room, price]) => [
+        room,
+        normalizePerSqftRate(price),
+      ]),
+    ),
+  };
 }
 
 function PriceCalc() {
@@ -139,35 +157,27 @@ function PriceCalc() {
 
   useEffect(() => {
     fetchCalculatorSettings()
-      .then(setCalculatorSettings)
+      .then((settings) => setCalculatorSettings(normalizeCalculatorSettings(settings)))
       .catch(() => {
-        setCalculatorSettings(DEFAULT_CALCULATOR_SETTINGS);
+        setCalculatorSettings(normalizeCalculatorSettings(DEFAULT_CALCULATOR_SETTINGS));
       });
   }, []);
 
-
-
   const estimatedPrice = useMemo(() => {
-    // Calculate total price based on room prices and actual user-entered square footage
     let roomBasedTotal = 0;
-    
-    // Calculate price for each selected room
     for (const [room, quantity] of Object.entries(selectedRooms)) {
       if (quantity && quantity > 0) {
-        const roomPrice = (calculatorSettings.room_prices?.[room] ?? 0);
-        
-        // Sum sqft for all units of this room
+        const roomPrice =
+          normalizePerSqftRate(calculatorSettings.room_prices?.[room] ?? 0) ||
+          normalizePerSqftRate(calculatorSettings.base_price);
         let totalRoomSqft = 0;
         for (let i = 0; i < quantity; i++) {
           totalRoomSqft += roomSquareFeet[`${room}-${i}`] || 0;
         }
-        
-        // Add this room's contribution to total
         roomBasedTotal += roomPrice * totalRoomSqft;
       }
     }
 
-    // Apply package and scope multipliers
     const packageMultiplier = selectedPackage
       ? calculatorSettings.package_multipliers[selectedPackage] ?? 1
       : 1;
@@ -180,9 +190,8 @@ function PriceCalc() {
             ? calculatorSettings.office_design_multiplier
             : calculatorSettings.new_home_multiplier;
 
-    // Return rounded to nearest 1000
     return Math.round((roomBasedTotal * packageMultiplier * scopeMultiplier) / 1000) * 1000;
-  }, [calculatorSettings.room_prices, calculatorSettings.package_multipliers, calculatorSettings.new_home_multiplier, calculatorSettings.renovation_multiplier, calculatorSettings.villa_design_multiplier, calculatorSettings.office_design_multiplier, scope, selectedPackage, selectedRooms, roomSquareFeet]);
+  }, [calculatorSettings.base_price, calculatorSettings.room_prices, calculatorSettings.package_multipliers, calculatorSettings.new_home_multiplier, calculatorSettings.renovation_multiplier, calculatorSettings.villa_design_multiplier, calculatorSettings.office_design_multiplier, scope, selectedPackage, selectedRooms, roomSquareFeet]);
 
   function startFlow() {
     setStarted(true);

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.quote import QuoteRequest
 from app.schemas.quote import QuoteCreate, QuoteResponse
+from app.services.notifications import send_estimate_promotion_email
 
 
 def create_quote(payload: QuoteCreate, db: Session) -> QuoteResponse:
@@ -22,4 +23,19 @@ def create_quote(payload: QuoteCreate, db: Session) -> QuoteResponse:
     )
     db.add(quote)
     db.commit()
+
+    # Send promotional estimate email to the user
+    try:
+        send_estimate_promotion_email(
+            to_email=payload.email,
+            name=payload.name,
+            city=payload.city,
+            scope=payload.scope,
+            bhk=payload.bhk,
+            package=payload.package,
+            total_price=payload.total_price,
+        )
+    except Exception as exc:
+        print(f"[quotes] Estimate promotion email failed: {exc}")
+
     return QuoteResponse.success(quote_id=external_id)

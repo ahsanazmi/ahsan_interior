@@ -62,6 +62,11 @@ type Tab = "appointments" | "leads" | "quotes" | "reviews" | "calculation-histor
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/api$/, "");
 
+function normalizePerSqftRate(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return value >= 10000 ? Math.round(value / 100) : value;
+}
+
 function AdminDashboard() {
   const { user, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -986,16 +991,15 @@ function CalculatorSettingsTab({
   data: CalculatorSettings;
   onChange: (v: CalculatorSettings) => void;
 }) {
-  const [basePrice, setBasePrice] = useState(String(data.base_price));
-  const [bhkMultipliers, setBhkMultipliers] = useState<Record<string, number>>(() => {
-    const normalized = Object.entries(data.bhk_multipliers).map(([key, value]) => {
-      // Backward compatibility: convert old multiplier values to approximate sqft.
-      const sqftValue = value > 0 && value <= 10 ? Math.round(value * 1000) : Math.round(value);
-      return [key, sqftValue];
-    });
-    return Object.fromEntries(normalized);
-  });
-  const [roomPrices, setRoomPrices] = useState<Record<string, number>>(data.room_prices);
+  const [basePrice, setBasePrice] = useState(String(normalizePerSqftRate(data.base_price)));
+  const [roomPrices, setRoomPrices] = useState<Record<string, number>>(() =>
+    Object.fromEntries(
+      Object.entries(data.room_prices).map(([room, price]) => [
+        room,
+        normalizePerSqftRate(price),
+      ]),
+    ),
+  );
   const [packageMultipliers, setPackageMultipliers] = useState<Record<string, number>>(
     data.package_multipliers,
   );
@@ -1025,7 +1029,7 @@ function CalculatorSettingsTab({
     try {
       const updated = await updateAdminCalculatorSettings({
         base_price: Number(basePrice),
-        bhk_multipliers: bhkMultipliers,
+        bhk_multipliers: data.bhk_multipliers,
         room_prices: roomPrices,
         package_multipliers: packageMultipliers,
         new_home_multiplier: Number(newHomeMultiplier),
@@ -1047,9 +1051,12 @@ function CalculatorSettingsTab({
       <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-plum">Calculator Price Values</h2>
+            <h2 className="text-lg font-semibold text-plum">Calculator Price Settings</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              These values control the estimate shown on the public price calculator.
+              <strong>Formula:</strong> Σ (room sqft × room rate) × package multiplier × scope multiplier
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Base Rate is used as a fallback when a room has no specific per-sqft rate set below.
             </p>
           </div>
           <Button type="submit" disabled={saving} className="rounded-full">
@@ -1068,7 +1075,7 @@ function CalculatorSettingsTab({
               required
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              This rate is used with the room-level estimate shown on the public calculator.
+              Default per-sqft rate used when a selected room has no specific room price.
             </p>
           </div>
           <div>
@@ -1119,7 +1126,7 @@ function CalculatorSettingsTab({
       </div>
 
       <EditableNumberGrid
-        title="Room Prices (per sqft)"
+        title="Room Rates (₹ per sq ft)"
         suffix="₹/sqft"
         values={roomPrices}
         onChange={(key, value) => updateMap(setRoomPrices, key, value)}
@@ -1131,6 +1138,16 @@ function CalculatorSettingsTab({
         values={packageMultipliers}
         onChange={(key, value) => updateMap(setPackageMultipliers, key, value)}
       />
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <p className="font-semibold">How prices are calculated</p>
+        <ul className="mt-1 list-disc pl-4 space-y-0.5 text-xs">
+          <li>User selects rooms and enters square footage for each</li>
+          <li>Each room sqft × its room rate (₹/sqft) = room subtotal</li>
+          <li>All room subtotals are summed → base total</li>
+          <li>Base total × package multiplier × scope multiplier = final estimate</li>
+          <li>Result is rounded to nearest ₹1,000</li>
+        </ul>
+      </div>
     </form>
   );
 }

@@ -66,6 +66,49 @@ NextGen Living Space
     _send_email(to_email=to_email, subject=subject, body=body)
 
 
+def send_estimate_promotion_email(
+    *,
+    to_email: str,
+    name: str,
+    city: str | None = None,
+    scope: str | None = None,
+    bhk: str | None = None,
+    package: str | None = None,
+    total_price: float | None = None,
+) -> None:
+    """Send a promotional email right after a user submits a calculator estimate."""
+    city_line = f" in {city}" if city else ""
+    price_fmt = f"₹{total_price:,.0f}" if total_price else "to be confirmed"
+    subject = "Your interior estimate from NextGen Living Space is ready!"
+    body = f"""Hi {name},
+
+Thank you for using our Home Interior Price Calculator.
+
+Here is a summary of your estimate{city_line}:
+- Scope: {scope or 'Not specified'}
+- BHK: {bhk or 'Not specified'}
+- Package: {package or 'Not specified'}
+- Estimated Price: {price_fmt}
+
+This is an indicative estimate. Our design experts will reach out to you with a detailed quote after reviewing your requirements.
+
+Book a free consultation to get started:
+https://nextgenlivingspace.com/hire-a-designer
+
+Regards,
+NextGen Living Space
+"""
+    html = _estimate_promotion_template(
+        name=name,
+        city=city,
+        scope=scope,
+        bhk=bhk,
+        package=package,
+        price_fmt=price_fmt,
+    )
+    _send_email(to_email=to_email, subject=subject, body=body, html=html)
+
+
 def send_login_promotion_email(*, to_email: str, name: str, city: str | None = None) -> None:
     city_line = f" in {city}" if city else ""
     subject = "Fresh interior offers from NextGen Living Space"
@@ -290,6 +333,85 @@ def _promotion_template(*, name: str, city: str | None) -> str:
             <tr>
               <td style="padding:18px 30px;background:#faf7f4;color:#7d6d76;font-size:12px;line-height:1.5;text-align:center;">
                 You are receiving this because you signed in to NextGen Living Space.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"""
+
+
+def _estimate_promotion_template(
+    *,
+    name: str,
+    city: str | None,
+    scope: str | None,
+    bhk: str | None,
+    package: str | None,
+    price_fmt: str,
+) -> str:
+    import html as _html
+    safe_name = _html.escape(name)
+    city_text = f" in {_html.escape(city)}" if city else ""
+    safe_scope = _html.escape(scope or "Not specified")
+    safe_bhk = _html.escape(bhk or "Not specified")
+    safe_package = _html.escape(package or "Not specified")
+    safe_price = _html.escape(price_fmt)
+    return f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your Interior Estimate - NextGen Living Space</title>
+  </head>
+  <body style="margin:0;background:#f6f1eb;font-family:Arial,Helvetica,sans-serif;color:#24131f;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f1eb;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #eadfd6;">
+            <tr>
+              <td style="background:#3c1432;color:#ffffff;padding:28px 30px;">
+                <p style="margin:0 0 8px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#e8c7d9;">NextGen Living Space</p>
+                <h1 style="margin:0;font-size:28px;line-height:1.2;">Your estimate is ready{city_text}! 🏠</h1>
+                <p style="margin:12px 0 0;color:#f6eaf1;font-size:15px;line-height:1.6;">Hi {safe_name}, thank you for using our Home Interior Price Calculator.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 30px;">
+                <h2 style="margin:0 0 16px;font-size:20px;color:#3c1432;">Your Estimate Summary</h2>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eadfd6;border-radius:12px;overflow:hidden;">
+                  <tr style="background:#faf7f4;">
+                    <td style="padding:12px 16px;font-size:13px;color:#6f5d68;">Scope of Work</td>
+                    <td style="padding:12px 16px;font-size:14px;font-weight:bold;color:#3c1432;text-align:right;">{safe_scope}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 16px;font-size:13px;color:#6f5d68;border-top:1px solid #eadfd6;">BHK Type</td>
+                    <td style="padding:12px 16px;font-size:14px;font-weight:bold;color:#3c1432;text-align:right;border-top:1px solid #eadfd6;">{safe_bhk}</td>
+                  </tr>
+                  <tr style="background:#faf7f4;">
+                    <td style="padding:12px 16px;font-size:13px;color:#6f5d68;border-top:1px solid #eadfd6;">Package</td>
+                    <td style="padding:12px 16px;font-size:14px;font-weight:bold;color:#3c1432;text-align:right;border-top:1px solid #eadfd6;">{safe_package}</td>
+                  </tr>
+                  <tr style="background:#fff4e8;">
+                    <td style="padding:14px 16px;font-size:14px;font-weight:bold;color:#3c1432;border-top:1px solid #eadfd6;">Estimated Price</td>
+                    <td style="padding:14px 16px;font-size:20px;font-weight:bold;color:#d9467c;text-align:right;border-top:1px solid #eadfd6;">{safe_price}</td>
+                  </tr>
+                </table>
+                <p style="margin:16px 0;font-size:13px;color:#7b6873;line-height:1.6;">This is an indicative estimate. Final quote is shared after a design consultation and site visit.</p>
+                <div style="margin-top:24px;padding:18px;border-radius:14px;background:#fff4e8;">
+                  <p style="margin:0;color:#3c1432;font-size:15px;font-weight:bold;">Ready to get started?</p>
+                  <p style="margin:8px 0 0;color:#6f5d68;font-size:14px;line-height:1.6;">Book a free consultation and our design experts will create a personalised plan for your home.</p>
+                </div>
+                <p style="margin:24px 0 0;text-align:center;">
+                  <a href="https://nextgenlivingspace.com/hire-a-designer" style="display:inline-block;background:#d9467c;color:#ffffff;text-decoration:none;padding:13px 28px;border-radius:999px;font-weight:bold;font-size:15px;">Book Free Consultation</a>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 30px;background:#faf7f4;color:#7d6d76;font-size:12px;line-height:1.5;text-align:center;">
+                You received this because you requested an estimate at NextGen Living Space.
               </td>
             </tr>
           </table>

@@ -8,6 +8,7 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
+        value: postgresql://interiordb_vjwe_user:pexDzmFC8esa3l6azlh4Cj5dKIWy9yWV@dpg-d8j39a6q1p3s73f9pkn0-a.ohio-postgres.render.com/interiordb_vjwe
         scope: runtime
       - key: EMAIL_PROVIDER
         scope: runtime
