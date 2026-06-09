@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
     resend_from_email: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("RESEND_FROM_EMAIL", "RESEND_FROM"),
+        validation_alias=AliasChoices("RESEND_FROM_EMAIL", "RESEND_FROM", "SENDER_EMAIL"),
     )
     meta_verify_token: str | None = Field(
         default=None,

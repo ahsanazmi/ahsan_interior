@@ -10,7 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import api_router
 from app.core.config import settings
 from app.core.cors import add_cors_middleware
-from app.db import ensure_compatibility_schema, init_db
+from app.db import ensure_compatibility_schema, init_db, engine
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,12 @@ app = FastAPI(
 )
 
 add_cors_middleware(app)
+
+# Configure basic logging to stdout so Render shows startup messages
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+logger.info("Starting Dream Home Design API")
+logger.info("Effective CORS origins: %s", settings.origins)
 app.include_router(api_router, prefix=settings.api_prefix)
 
 # Serve uploaded images at /uploads/<filename>
@@ -93,3 +100,26 @@ async def api_root() -> dict[str, str]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/_debug/origins")
+def debug_origins() -> dict[str, list[str]]:
+    """Debug endpoint to show the effective CORS origins the app is using."""
+    return {"origins": settings.origins}
+
+
+@app.get("/_debug/db")
+def debug_db() -> dict:
+    """Attempt a lightweight DB check and return row counts or an error."""
+    try:
+        with engine.connect() as conn:
+            counts = {}
+            for tbl in ("users", "leads", "appointments", "blog_posts", "reviews", "quote_requests"):
+                try:
+                    res = conn.execute(text(f"SELECT count(*) FROM {tbl}"))
+                    counts[tbl] = int(res.scalar() or 0)
+                except Exception:
+                    counts[tbl] = None
+        return {"ok": True, "counts": counts}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}

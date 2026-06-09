@@ -1,0 +1,9 @@
+ id |             external_id              |      name       |     city      |       service       | rating |             title              |              review_snippet              | review_image_url |          created_at           
+----+--------------------------------------+-----------------+---------------+---------------------+--------+--------------------------------+------------------------------------------+------------------+-------------------------------
+ 13 | a9dc3692-28ca-45f4-82f5-24f1b729d59a | Zafar           | New Delhi     | Living room         |      5 | Beautiful Interior             | A thoughtfully designed interior not onl |                  | 2026-06-01 06:28:21.620563+00
+ 12 | bdfa075a-f8fb-4d65-a612-a355ffa5c92a | Nasir choudhary | Noida         | Full home interiors |      5 | very good                      | Very good interior and very good desine  |                  | 2026-06-01 06:14:19.799428+00
+ 11 | 4b5dc00e-1a61-470d-ade4-5e1866aaaa1b | Arshad malik    | Rabupura      | Full home interiors |      5 | Very good service              | Very very excellent work and so amazing  |                  | 2026-05-25 15:45:36.676989+00
+ 10 | 45e1a294-c96a-455c-aee0-409f74479862 | Zubair Khan     | Greater Noifa | Full home interiors |      5 | Creative and Professional Team | “Excellent experience from start to fini |                  | 2026-05-21 10:01:42.569475+00
+  9 | 4f46fedf-1118-4def-8154-4ec84a6f2858 | Arman Khan      | noida         | Full home interiors |      5 |                                | "It is a amazing experience,and manageme |                  | 2026-05-21 09:52:13.226674+00
+(5 rows)
+

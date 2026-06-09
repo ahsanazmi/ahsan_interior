@@ -40,9 +40,9 @@ steps:
       - '--add-cloudsql-instances'
       - '${_CLOUD_SQL_CONNECTION}'
       - '--set-env-vars'
-      - 'DATABASE_URL=${_DATABASE_URL},RUN_MIGRATIONS=true,ALLOWED_ORIGINS=${_ALLOWED_ORIGINS},SECRET_KEY=${_SECRET_KEY},EMAIL_PROVIDER=${_EMAIL_PROVIDER},SMTP_HOST=${_SMTP_HOST},SMTP_PORT=${_SMTP_PORT},SMTP_USER=${_SMTP_USER},MAIL_FROM=${_MAIL_FROM}'
+      - 'DATABASE_URL=${_DATABASE_URL},RUN_MIGRATIONS=true,ALLOWED_ORIGINS=${_ALLOWED_ORIGINS},SECRET_KEY=${_SECRET_KEY},RESEND_FROM_EMAIL=${_RESEND_FROM_EMAIL}'
       - '--set-secrets'
-      - 'SMTP_PASSWORD=SMTP_PASSWORD:latest,RESEND_API_KEY=RESEND_API_KEY:latest'
+      - 'RESEND_API_KEY=RESEND_API_KEY:latest'
       - '--memory'
       - '512Mi'
       - '--cpu'
@@ -91,11 +91,7 @@ substitutions:
   _DATABASE_URL: 'postgresql://admin:password@/interior_db?host=/cloudsql/your-project:region:interior-db'
   _ALLOWED_ORIGINS: 'https://your-frontend-url.com'
   _SECRET_KEY: 'your-generated-secret-key'
-  _EMAIL_PROVIDER: 'smtp'
-  _SMTP_HOST: 'smtp.gmail.com'
-  _SMTP_PORT: '587'
-  _SMTP_USER: 'your-email@gmail.com'
-  _MAIL_FROM: 'noreply@your-company.com'
+  _RESEND_FROM_EMAIL: 'noreply@your-company.com'
 
 options:
   logging: CLOUD_LOGGING_ONLY
